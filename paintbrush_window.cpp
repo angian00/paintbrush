@@ -35,16 +35,16 @@ PaintbrushWindow::PaintbrushWindow() {
 
 
     auto toolColorChooserAction = new QAction("Choose Color", this);
-    //newAction->setIcon();
+    toolColorChooserAction->setIcon(QIcon("images/color-filter.svg"));
     toolColorChooserAction->setToolTip("Choose color");
 
     auto toolDrawAction = new QAction("Draw", this);
-    //newAction->setIcon();
+    toolDrawAction->setIcon(QIcon("images/design-pencil.svg"));
     toolDrawAction->setToolTip("Draw tool");
     toolDrawAction->setShortcut(QKeySequence("D"));
 
     auto toolEraseAction = new QAction("Erase", this);
-    //newAction->setIcon();
+    toolEraseAction->setIcon(QIcon("images/erase.svg"));
     toolEraseAction->setToolTip("Erase tool");
     toolEraseAction->setShortcut(QKeySequence("E"));
 
@@ -64,13 +64,14 @@ PaintbrushWindow::PaintbrushWindow() {
 
 
     auto toolBar = new QToolBar(this);
+    toolBar->setIconSize(QSize(32, 32));
+    toolBar->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
+    addToolBar(Qt::LeftToolBarArea, toolBar);
+
     toolBar->addAction(toolColorChooserAction);
     toolBar->addAction(toolDrawAction);
     toolBar->addAction(toolEraseAction);
     toolBar->addSeparator();
-
-    // Aggiunta della toolbar alla finestra
-    addToolBar(Qt::LeftToolBarArea, toolBar);
 
 
     m_colorChooser = new QColorDialog(this);
@@ -84,7 +85,6 @@ PaintbrushWindow::PaintbrushWindow() {
     connect(toolColorChooserAction, &QAction::triggered, this, &PaintbrushWindow::onToolColorChooser);
     connect(toolDrawAction, &QAction::triggered, m_canvas, &PaintbrushCanvas::onToolDraw);
     connect(toolEraseAction, &QAction::triggered, m_canvas, &PaintbrushCanvas::onToolErase);
-
 
     connect(m_colorChooser, SIGNAL(colorSelected(const QColor &)), m_canvas, SLOT(setActiveColor(QColor)));
 }

@@ -1,9 +1,8 @@
 ## TODO
-- scelta colori e width (tool settings)
-- "save as" vs "save"
 - undo/redo
+- scelta width (tool settings)
+- "save as" vs "save"
 
-- icone tools
 
 + cursore eraser
 + load images
