@@ -1,4 +1,5 @@
 #include "paintbrush_window.h"
+#include "qcolordialog.h"
 
 #include <QApplication>
 #include <QAction>
@@ -10,11 +11,17 @@
 #include <iostream>
 
 
+const int screenWidth = 800;
+const int screenHeight = 600;
+
+const int documentWidth = 800;
+const int documentHeight = 600;
 
 PaintbrushWindow::PaintbrushWindow() {
-    setFixedSize(800, 600);
+    setFixedSize(screenWidth, screenHeight);
+    m_editor = new Editor { documentWidth, documentHeight };
 
-    m_canvas = new PaintbrushCanvas { this };
+    m_canvas = new PaintbrushCanvas { this, m_editor };
 
     auto newAction = new QAction("New", this);
     newAction->setToolTip("New file");
@@ -77,14 +84,44 @@ PaintbrushWindow::PaintbrushWindow() {
     m_colorChooser = new QColorDialog(this);
 
 
-    connect(newAction, &QAction::triggered, this, &PaintbrushWindow::onNew);
-    connect(openAction, &QAction::triggered, this, &PaintbrushWindow::onOpen);
-    connect(saveAction, &QAction::triggered, this, &PaintbrushWindow::onSave);
-    connect(exitAction, &QAction::triggered, this, &PaintbrushWindow::onExit);
+    connect(newAction,  &QAction::triggered, this, &PaintbrushWindow::onFileNew);
+    connect(openAction, &QAction::triggered, this, &PaintbrushWindow::onFileOpen);
+    connect(saveAction, &QAction::triggered, this, &PaintbrushWindow::onFileSave);
+    connect(exitAction, &QAction::triggered, this, &PaintbrushWindow::onFileExit);
 
     connect(toolColorChooserAction, &QAction::triggered, this, &PaintbrushWindow::onToolColorChooser);
-    connect(toolDrawAction, &QAction::triggered, m_canvas, &PaintbrushCanvas::onToolDraw);
-    connect(toolEraseAction, &QAction::triggered, m_canvas, &PaintbrushCanvas::onToolErase);
+    connect(toolDrawAction,         &QAction::triggered, this, &PaintbrushWindow::onToolDraw);
+    connect(toolEraseAction,        &QAction::triggered, this, &PaintbrushWindow::onToolErase);
 
-    connect(m_colorChooser, SIGNAL(colorSelected(const QColor &)), m_canvas, SLOT(setActiveColor(QColor)));
+    connect(m_colorChooser, &QColorDialog::colorSelected, this, &PaintbrushWindow::onColorChosen);
+}
+
+
+void PaintbrushWindow::onFileOpen() {
+    QString fileName = QFileDialog::getOpenFileName(this, "Open file");
+    if (fileName.isEmpty())
+        return;
+
+    if (!m_editor->loadFile(fileName)) {
+        QMessageBox::warning(this, "Warning", "Cannot open file " + fileName);
+        return;
+    }
+    setWindowTitle(fileName);
+
+    //update();
+}
+
+void PaintbrushWindow::onFileSave() {
+    QString fileName = QFileDialog::getSaveFileName(this, "Save file");
+    if (fileName.isEmpty())
+        return;
+
+    if (!m_editor->saveFile(fileName)) {
+        QMessageBox::warning(this, "Warning", "Cannot save file " + fileName);
+        return;
+    }
+}
+
+void PaintbrushWindow::onFileExit() {
+    close();
 }

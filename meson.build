@@ -16,6 +16,7 @@ qt5_dep = dependency('qt5', modules: ['Core', 'Gui', 'Widgets'])
 
 sources = [
   'main.cpp',
+  'editor.cpp',
   'paintbrush_window.cpp',
   'paintbrush_canvas.cpp',
 ]
