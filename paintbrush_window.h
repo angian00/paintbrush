@@ -21,17 +21,27 @@ private:
     QColorDialog *m_colorChooser;
 
 private slots:
-    void onFileNew() {
-        QMessageBox::information(this, "New", "TODO: onNew");
-    }
-
+    void onFileNew();
     void onFileOpen();
     void onFileSave();
     void onFileExit();
 
+    void onEditUndo() {
+        std::cout << "onEditUndo" << std::endl;
+        m_editor->undo();
+        m_canvas->update();
+    }
+
+    void onEditRedo() {
+        std::cout << "onEditRedo" << std::endl;
+        m_editor->redo();
+        m_canvas->update();
+    }
+
+
     void onToolColorChooser(const QColor & color) { m_colorChooser->show(); }
-    void onToolDraw() { m_editor->setActiveTool(ToolType::Draw); }
-    void onToolErase() { m_editor->setActiveTool(ToolType::Erase); }
+    void onToolDraw() { m_editor->setActiveTool(ToolType::ToolDraw); }
+    void onToolErase() { m_editor->setActiveTool(ToolType::ToolErase); }
 
     void onColorChosen(const QColor &color) {
         m_editor->setActiveColor(color);

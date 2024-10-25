@@ -1,5 +1,7 @@
 ## TODO
-- undo/redo
+- reset initial buffer on load/save
+
+- new action
 - scelta width (tool settings)
 - "save as" vs "save"
 

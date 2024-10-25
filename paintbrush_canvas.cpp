@@ -25,12 +25,16 @@ void PaintbrushCanvas::paintEvent(QPaintEvent * _)
 
 void PaintbrushCanvas::mouseMoveEvent(QMouseEvent *event) {
     if (!(event->buttons() & Qt::LeftButton)) {
-        m_isDragging = false;
+        if (m_isDragging) {
+            m_editor->endDrag();
+            m_isDragging = false;
+        }
         return;
     }
     
     if (!m_isDragging) {
         m_isDragging = true;
+        m_editor->startDrag();
         m_lineStart = { event->x(), event->y() };
         return;
     }

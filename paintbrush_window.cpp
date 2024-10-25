@@ -40,6 +40,14 @@ PaintbrushWindow::PaintbrushWindow() {
     exitAction->setShortcut(QKeySequence("Ctrl+X"));
 
 
+    auto undoAction = new QAction("Undo", this);
+    undoAction->setToolTip("Undo previous action");
+    undoAction->setShortcut(QKeySequence("Ctrl+Z"));
+
+    auto redoAction = new QAction("Redo", this);
+    redoAction->setToolTip("Redo previous action");
+    redoAction->setShortcut(QKeySequence("Ctrl+Y"));
+
 
     auto toolColorChooserAction = new QAction("Choose Color", this);
     toolColorChooserAction->setIcon(QIcon("images/color-filter.svg"));
@@ -56,19 +64,28 @@ PaintbrushWindow::PaintbrushWindow() {
     toolEraseAction->setShortcut(QKeySequence("E"));
 
 
+    //--------------------------- menu bar ---------------------------
+
     auto menuBar = new QMenuBar {this};
+    setMenuBar(menuBar);
 
     auto fileMenu = new QMenu { "File", this};
     menuBar->addMenu(fileMenu);
 
     fileMenu->addAction(newAction);
-    fileMenu->addAction(openAction);    
+    fileMenu->addAction(openAction);
     fileMenu->addAction(saveAction);    
     fileMenu->addSeparator();
     fileMenu->addAction(exitAction);
 
-    setMenuBar(menuBar);
 
+    auto editMenu = new QMenu { "Edit", this};
+    menuBar->addMenu(editMenu);
+
+    editMenu->addAction(undoAction);
+    editMenu->addAction(redoAction);    
+
+    //--------------------------- tool bar ---------------------------
 
     auto toolBar = new QToolBar(this);
     toolBar->setIconSize(QSize(32, 32));
@@ -83,12 +100,16 @@ PaintbrushWindow::PaintbrushWindow() {
 
     m_colorChooser = new QColorDialog(this);
 
+    //--------------------- connect signals/slots ---------------------
 
     connect(newAction,  &QAction::triggered, this, &PaintbrushWindow::onFileNew);
     connect(openAction, &QAction::triggered, this, &PaintbrushWindow::onFileOpen);
     connect(saveAction, &QAction::triggered, this, &PaintbrushWindow::onFileSave);
     connect(exitAction, &QAction::triggered, this, &PaintbrushWindow::onFileExit);
 
+    connect(undoAction, &QAction::triggered, this, &PaintbrushWindow::onEditUndo);
+    connect(redoAction, &QAction::triggered, this, &PaintbrushWindow::onEditRedo);
+    
     connect(toolColorChooserAction, &QAction::triggered, this, &PaintbrushWindow::onToolColorChooser);
     connect(toolDrawAction,         &QAction::triggered, this, &PaintbrushWindow::onToolDraw);
     connect(toolEraseAction,        &QAction::triggered, this, &PaintbrushWindow::onToolErase);
@@ -96,6 +117,10 @@ PaintbrushWindow::PaintbrushWindow() {
     connect(m_colorChooser, &QColorDialog::colorSelected, this, &PaintbrushWindow::onColorChosen);
 }
 
+
+void PaintbrushWindow::onFileNew() {
+    QMessageBox::information(this, "New", "TODO: onNew");
+}
 
 void PaintbrushWindow::onFileOpen() {
     QString fileName = QFileDialog::getOpenFileName(this, "Open file");
