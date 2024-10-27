@@ -8,19 +8,29 @@
 #include <QMainWindow>
 #include <QMessageBox>
 #include <QFileDialog>
+#include <QAction>
 
 
 class PaintbrushWindow : public QMainWindow
 {
 public:
     explicit PaintbrushWindow();
-        
+    void start(const char *filename=nullptr);
+
 private:
     Editor *m_editor;
     PaintbrushCanvas *m_canvas;
     QColorDialog *m_colorChooser;
 
+    QAction *m_undoAction;
+    QAction *m_redoAction;
+
+    QString m_windowTitle;
+
+    void openFile(QString filepath);
+
 private slots:
+    //-------- from gui --------
     void onFileNew();
     void onFileOpen();
     void onFileSave();
@@ -45,6 +55,20 @@ private slots:
 
     void onColorChosen(const QColor &color) {
         m_editor->setActiveColor(color);
+    }
+
+    //-------- from editor --------
+    void onModifiedStatusChanged(bool isDocumentModified) {
+        auto fullWindowTitle = m_windowTitle;
+        if (isDocumentModified)
+            fullWindowTitle += "*";
+
+        setWindowTitle(fullWindowTitle);
+    }
+
+    void onCommandStackChanged(std::vector<Command *> stack, int currStackPos) {
+        m_undoAction->setEnabled( (currStackPos > 0) );
+        m_redoAction->setEnabled( (currStackPos < (int)stack.size()) );
     }
 };
 

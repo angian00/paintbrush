@@ -40,13 +40,13 @@ PaintbrushWindow::PaintbrushWindow() {
     exitAction->setShortcut(QKeySequence("Ctrl+X"));
 
 
-    auto undoAction = new QAction("Undo", this);
-    undoAction->setToolTip("Undo previous action");
-    undoAction->setShortcut(QKeySequence("Ctrl+Z"));
+    m_undoAction = new QAction("Undo", this);
+    m_undoAction->setToolTip("Undo previous action");
+    m_undoAction->setShortcut(QKeySequence("Ctrl+Z"));
 
-    auto redoAction = new QAction("Redo", this);
-    redoAction->setToolTip("Redo previous action");
-    redoAction->setShortcut(QKeySequence("Ctrl+Y"));
+    m_redoAction = new QAction("Redo", this);
+    m_redoAction->setToolTip("Redo previous action");
+    m_redoAction->setShortcut(QKeySequence("Ctrl+Y"));
 
 
     auto toolColorChooserAction = new QAction("Choose Color", this);
@@ -82,8 +82,8 @@ PaintbrushWindow::PaintbrushWindow() {
     auto editMenu = new QMenu { "Edit", this};
     menuBar->addMenu(editMenu);
 
-    editMenu->addAction(undoAction);
-    editMenu->addAction(redoAction);    
+    editMenu->addAction(m_undoAction);
+    editMenu->addAction(m_redoAction);    
 
     //--------------------------- tool bar ---------------------------
 
@@ -100,51 +100,82 @@ PaintbrushWindow::PaintbrushWindow() {
 
     m_colorChooser = new QColorDialog(this);
 
-    //--------------------- connect signals/slots ---------------------
+    //--------------------- connect slots from ui input ---------------------
 
     connect(newAction,  &QAction::triggered, this, &PaintbrushWindow::onFileNew);
     connect(openAction, &QAction::triggered, this, &PaintbrushWindow::onFileOpen);
     connect(saveAction, &QAction::triggered, this, &PaintbrushWindow::onFileSave);
     connect(exitAction, &QAction::triggered, this, &PaintbrushWindow::onFileExit);
 
-    connect(undoAction, &QAction::triggered, this, &PaintbrushWindow::onEditUndo);
-    connect(redoAction, &QAction::triggered, this, &PaintbrushWindow::onEditRedo);
+    connect(m_undoAction, &QAction::triggered, this, &PaintbrushWindow::onEditUndo);
+    connect(m_redoAction, &QAction::triggered, this, &PaintbrushWindow::onEditRedo);
     
     connect(toolColorChooserAction, &QAction::triggered, this, &PaintbrushWindow::onToolColorChooser);
     connect(toolDrawAction,         &QAction::triggered, this, &PaintbrushWindow::onToolDraw);
     connect(toolEraseAction,        &QAction::triggered, this, &PaintbrushWindow::onToolErase);
 
     connect(m_colorChooser, &QColorDialog::colorSelected, this, &PaintbrushWindow::onColorChosen);
+
+    //--------------------- connect slots from editor ---------------------
+    connect(m_editor, &Editor::modifiedStatusChanged, this, &PaintbrushWindow::onModifiedStatusChanged);
+    connect(m_editor, &Editor::commandStackChanged, this, &PaintbrushWindow::onCommandStackChanged);
+
+    //--------------------- startup ---------------------
 }
 
+void PaintbrushWindow::start(const char *cmdLineArg) {
+    onFileNew();
+    
+    if (cmdLineArg == nullptr) {
+        show();
+        return;
+    }
+
+    openFile(cmdLineArg);
+    show();
+}
 
 void PaintbrushWindow::onFileNew() {
-    QMessageBox::information(this, "New", "TODO: onNew");
+    m_editor->newFile();
+    m_windowTitle = "Untitled";
+    setWindowTitle(m_windowTitle);
+
+    m_canvas->update();
 }
 
 void PaintbrushWindow::onFileOpen() {
-    QString fileName = QFileDialog::getOpenFileName(this, "Open file");
-    if (fileName.isEmpty())
-        return;
+    openFile("");
+}
 
-    if (!m_editor->loadFile(fileName)) {
-        QMessageBox::warning(this, "Warning", "Cannot open file " + fileName);
+void PaintbrushWindow::openFile(QString filepath) {
+    if (filepath.isEmpty())
+        filepath = QFileDialog::getOpenFileName(this, "Open file");
+
+    if (!m_editor->loadFile(filepath)) {
+        QMessageBox::warning(this, "Warning", "Cannot open file " + filepath);
         return;
     }
-    setWindowTitle(fileName);
 
-    //update();
+    m_windowTitle = QFileInfo(filepath).fileName();
+    setWindowTitle(m_windowTitle);
+
+    m_canvas->update();
 }
 
 void PaintbrushWindow::onFileSave() {
-    QString fileName = QFileDialog::getSaveFileName(this, "Save file");
-    if (fileName.isEmpty())
+    QString filepath = QFileDialog::getSaveFileName(this, "Save file");
+    if (filepath.isEmpty())
         return;
 
-    if (!m_editor->saveFile(fileName)) {
-        QMessageBox::warning(this, "Warning", "Cannot save file " + fileName);
+    if (!m_editor->saveFile(filepath)) {
+        QMessageBox::warning(this, "Warning", "Cannot save file " + filepath);
         return;
     }
+
+    m_windowTitle = QFileInfo(filepath).fileName();
+    setWindowTitle(m_windowTitle);
+
+    m_canvas->update();
 }
 
 void PaintbrushWindow::onFileExit() {

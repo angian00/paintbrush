@@ -21,7 +21,10 @@ sources = [
   'paintbrush_canvas.cpp',
 ]
 
-sources += qt5.compile_moc(headers: 'paintbrush_canvas.h')
+sources += qt5.compile_moc(headers: [
+  'editor.h',
+  'paintbrush_canvas.h',
+])
 
 executable(
   'paintbrush.x',
