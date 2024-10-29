@@ -17,15 +17,22 @@ Q_OBJECT
 public:
     explicit PaintbrushCanvas(QWidget *parent, Editor *editor);
     
+public slots:
+    void onToolChosen(ToolType newTool);
+
+
 protected:
     Editor *m_editor;
 
     bool m_isDragging { false };
-    QPoint m_lineStart;
+    QPoint m_dragStart;
+    QPoint m_currMousePos;
 
 
     void paintEvent(QPaintEvent *event) override;
     void mouseMoveEvent(QMouseEvent *event) override;
+
+    void paintToolCursor(QPainter &painter, const ToolData * toolData);
 
 };
 

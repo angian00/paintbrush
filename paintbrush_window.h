@@ -13,6 +13,7 @@
 
 class PaintbrushWindow : public QMainWindow
 {
+Q_OBJECT
 public:
     explicit PaintbrushWindow();
     void start(const char *filename=nullptr);
@@ -37,39 +38,32 @@ private slots:
     void onFileExit();
 
     void onEditUndo() {
-        std::cout << "onEditUndo" << std::endl;
+        //std::cout << "onEditUndo" << std::endl;
         m_editor->undo();
         m_canvas->update();
     }
 
     void onEditRedo() {
-        std::cout << "onEditRedo" << std::endl;
+        //std::cout << "onEditRedo" << std::endl;
         m_editor->redo();
         m_canvas->update();
     }
 
 
-    void onToolColorChooser(const QColor & color) { m_colorChooser->show(); }
-    void onToolDraw() { m_editor->setActiveTool(ToolType::ToolDraw); }
-    void onToolErase() { m_editor->setActiveTool(ToolType::ToolErase); }
-
     void onColorChosen(const QColor &color) {
         m_editor->setActiveColor(color);
+
+        //when you choose a color, draw tool is also selected
+        chooseTool(ToolDraw);
     }
+
 
     //-------- from editor --------
-    void onModifiedStatusChanged(bool isDocumentModified) {
-        auto fullWindowTitle = m_windowTitle;
-        if (isDocumentModified)
-            fullWindowTitle += "*";
+    void onModifiedStatusChanged(bool isDocumentModified);
+    void onCommandStackChanged(std::vector<Command *> stack, int currStackPos);
 
-        setWindowTitle(fullWindowTitle);
-    }
-
-    void onCommandStackChanged(std::vector<Command *> stack, int currStackPos) {
-        m_undoAction->setEnabled( (currStackPos > 0) );
-        m_redoAction->setEnabled( (currStackPos < (int)stack.size()) );
-    }
+signals:
+    void chooseTool(ToolType newTool);
 };
 
 

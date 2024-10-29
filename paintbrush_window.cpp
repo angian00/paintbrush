@@ -1,4 +1,6 @@
 #include "paintbrush_window.h"
+#include "editor.h"
+#include "paintbrush_canvas.h"
 #include "qcolordialog.h"
 
 #include <QApplication>
@@ -17,11 +19,13 @@ const int screenHeight = 600;
 const int documentWidth = 800;
 const int documentHeight = 600;
 
+
 PaintbrushWindow::PaintbrushWindow() {
     setFixedSize(screenWidth, screenHeight);
-    m_editor = new Editor { documentWidth, documentHeight };
 
+    m_editor = new Editor { documentWidth, documentHeight };
     m_canvas = new PaintbrushCanvas { this, m_editor };
+
 
     auto newAction = new QAction("New", this);
     newAction->setToolTip("New file");
@@ -52,6 +56,11 @@ PaintbrushWindow::PaintbrushWindow() {
     auto toolColorChooserAction = new QAction("Choose Color", this);
     toolColorChooserAction->setIcon(QIcon("images/color-filter.svg"));
     toolColorChooserAction->setToolTip("Choose color");
+
+    auto toolSelectAction = new QAction("Select", this);
+    toolSelectAction->setIcon(QIcon("images/square3d-corner-to-corner.svg"));
+    toolSelectAction->setToolTip("Select tool");
+    toolSelectAction->setShortcut(QKeySequence("S"));
 
     auto toolDrawAction = new QAction("Draw", this);
     toolDrawAction->setIcon(QIcon("images/design-pencil.svg"));
@@ -92,6 +101,7 @@ PaintbrushWindow::PaintbrushWindow() {
     toolBar->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
     addToolBar(Qt::LeftToolBarArea, toolBar);
 
+    toolBar->addAction(toolSelectAction);
     toolBar->addAction(toolColorChooserAction);
     toolBar->addAction(toolDrawAction);
     toolBar->addAction(toolEraseAction);
@@ -110,15 +120,20 @@ PaintbrushWindow::PaintbrushWindow() {
     connect(m_undoAction, &QAction::triggered, this, &PaintbrushWindow::onEditUndo);
     connect(m_redoAction, &QAction::triggered, this, &PaintbrushWindow::onEditRedo);
     
-    connect(toolColorChooserAction, &QAction::triggered, this, &PaintbrushWindow::onToolColorChooser);
-    connect(toolDrawAction,         &QAction::triggered, this, &PaintbrushWindow::onToolDraw);
-    connect(toolEraseAction,        &QAction::triggered, this, &PaintbrushWindow::onToolErase);
+    connect(toolSelectAction,       &QAction::triggered, this, [=]() { chooseTool(ToolSelect); });
+    connect(toolDrawAction,         &QAction::triggered, this, [=]() { chooseTool(ToolDraw); });
+    connect(toolEraseAction,        &QAction::triggered, this, [=]() { chooseTool(ToolErase); });
 
+    connect(toolColorChooserAction, &QAction::triggered, this, [=]() { m_colorChooser->show(); });
     connect(m_colorChooser, &QColorDialog::colorSelected, this, &PaintbrushWindow::onColorChosen);
 
     //--------------------- connect slots from editor ---------------------
     connect(m_editor, &Editor::modifiedStatusChanged, this, &PaintbrushWindow::onModifiedStatusChanged);
     connect(m_editor, &Editor::commandStackChanged, this, &PaintbrushWindow::onCommandStackChanged);
+
+    //--------------------- connect signals from this ---------------------
+    connect(this, &PaintbrushWindow::chooseTool, m_editor, &Editor::onToolChosen);
+    connect(this, &PaintbrushWindow::chooseTool, m_canvas, &PaintbrushCanvas::onToolChosen);
 
     //--------------------- startup ---------------------
 }
@@ -140,6 +155,7 @@ void PaintbrushWindow::onFileNew() {
     m_windowTitle = "Untitled";
     setWindowTitle(m_windowTitle);
 
+    chooseTool(ToolDraw);
     m_canvas->update();
 }
 
@@ -159,6 +175,7 @@ void PaintbrushWindow::openFile(QString filepath) {
     m_windowTitle = QFileInfo(filepath).fileName();
     setWindowTitle(m_windowTitle);
 
+    chooseTool(ToolDraw);
     m_canvas->update();
 }
 
@@ -180,4 +197,18 @@ void PaintbrushWindow::onFileSave() {
 
 void PaintbrushWindow::onFileExit() {
     close();
+}
+
+
+void PaintbrushWindow::onModifiedStatusChanged(bool isDocumentModified) {
+    auto fullWindowTitle = m_windowTitle;
+    if (isDocumentModified)
+        fullWindowTitle += "*";
+
+    setWindowTitle(fullWindowTitle);
+}
+
+void PaintbrushWindow::onCommandStackChanged(std::vector<Command *> stack, int currStackPos) {
+    m_undoAction->setEnabled( (currStackPos > 0) );
+    m_redoAction->setEnabled( (currStackPos < (int)stack.size()) );
 }

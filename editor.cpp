@@ -77,27 +77,38 @@ void Editor::setModified(bool isModified) {
 void Editor::onStartDrag() {
     struct Command *newCommand;
 
-    switch (m_activeTool) {
+    switch (m_activeTool->type()) {
         case ToolDraw: {
                 auto lines =  new std::vector<QPair<QPoint, QPoint>>;
-                newCommand = new struct CommandDraw(CommandType::CommandDraw, m_activeColor, lines);
+                newCommand = new struct CommandDraw(m_activeColor, lines);
             }
             break;
         case ToolErase: {
                 auto lines =  new std::vector<QPair<QPoint, QPoint>>;
-                newCommand = new struct CommandErase(CommandType::CommandErase, lines);
+                newCommand = new struct CommandErase(lines);
             }
             break;
+
+        default:
+            return;
     }
 
     m_currCommand = newCommand;
 }
 
 void Editor::onEndDrag() {
-    pushCurrentCommand();
+    switch (m_activeTool->type()) {
+        case ToolDraw:
+        case ToolErase:
+            pushCurrentCommand();
+            break;
+        
+        default:
+            ;
+    }
 }
 
-void Editor::onDragLine(const QPoint start, const QPoint end) {
+void Editor::onDrag(const QPoint start, const QPoint end) {
     assert(m_currCommand != nullptr);
 
     QPair<QPoint,QPoint> newLine {start, end};
@@ -105,6 +116,24 @@ void Editor::onDragLine(const QPoint start, const QPoint end) {
     updateCurrentCommand(newLine);
 }
 
+
+void Editor::onToolChosen(ToolType newToolType) {
+    if (m_activeTool->type() == newToolType)
+        return;
+    
+    delete m_activeTool;
+
+    switch (newToolType) {
+        case ToolDraw:
+            m_activeTool = new ToolDrawData {m_activeColor, defaultDrawWidth};
+            break;
+        case ToolErase:
+            m_activeTool = new ToolEraseData {defaultEraseWidth};
+            break;
+        default:
+            m_activeTool = new ToolSelectData();
+    }
+}
 
 void Editor::undo() {
     assert(m_cmdStackPos >= 0);

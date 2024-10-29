@@ -4,7 +4,6 @@
 
 - copy/cut/paste
 
-+ cursore eraser
 + load images
 
 + layers

@@ -10,10 +10,8 @@
 #include <QPixmap>
 
 
-enum ToolType {
-    ToolDraw,
-    ToolErase,
-};
+const int defaultDrawWidth  = 2;
+const int defaultEraseWidth = 10;
 
 
 class Editor : public QObject
@@ -31,19 +29,19 @@ public:
     void undo();
     void redo();
 
+    const ToolData * activeTool() { return m_activeTool; }
+
     void setActiveColor(const QColor & color) {
         m_activeColor = color;
-        //when you choose a color draw tool is also selected
-        m_activeTool = ToolDraw;
-    }
-
-    void setActiveTool(const ToolType newTool) {
-        m_activeTool = newTool;
     }
 
     void onStartDrag();
     void onEndDrag();
-    void onDragLine(const QPoint start, const QPoint end);
+    void onDrag(const QPoint start, const QPoint end);
+
+
+public slots:
+    void onToolChosen(ToolType newToolType);
 
 
 protected:
@@ -56,7 +54,8 @@ protected:
     bool m_isModified;
 
     QColor m_activeColor { Qt::black };
-    ToolType m_activeTool { ToolType::ToolDraw };
+    //ToolType m_activeTool { ToolType::ToolDraw };
+    ToolData * m_activeTool = new ToolDrawData { m_activeColor, defaultDrawWidth };
     
     int m_cmdStackPos = 0;
     Command *m_currCommand = nullptr;

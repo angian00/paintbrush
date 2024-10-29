@@ -23,6 +23,7 @@ sources = [
 
 sources += qt5.compile_moc(headers: [
   'editor.h',
+  'paintbrush_window.h',
   'paintbrush_canvas.h',
 ])
 
