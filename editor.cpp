@@ -42,6 +42,7 @@ bool Editor::loadFile(const QString filename) {
 
     reset(m_currBuffer, m_initialBuffer);
     setModified(false);
+    somethingDrawn();
 
     return true;
 }
@@ -53,34 +54,53 @@ bool Editor::saveFile(const QString filename) {
 
     reset(m_initialBuffer, m_currBuffer);
     setModified(false);
+    somethingDrawn();
 
     return true;
 }
 
-void Editor::reset(QPixmap &destBuffer, const QPixmap &srcBuffer) {
-    destBuffer = srcBuffer.copy();
 
-    m_cmdStack.clear();
-    m_cmdStackPos = 0;
+void Editor::onUndo() {
+    assert(m_cmdStackPos >= 0);
 
-    m_currCommand = nullptr;
+    //std::cout << "before undo; m_commandStack.size()=" << m_commandStack.size() << "; m_cmdStackPos=" << m_cmdStackPos << std::endl;
+    if (m_cmdStackPos == 0)
+        return;
 
+    m_cmdStackPos --;
+
+    restoreCommandsFromStack();
+    //std::cout << "after undo; m_commandStack.size()=" << m_commandStack.size() << "; m_cmdStackPos=" << m_cmdStackPos << std::endl;
+    commandStackChanged(m_cmdStack, m_cmdStackPos);
+}
+
+void Editor::onRedo() {
+    //std::cout << "before redo; m_commandStack.size()=" << m_commandStack.size() << "; m_cmdStackPos=" << m_cmdStackPos << std::endl;
+    assert(m_cmdStackPos <= (int)m_cmdStack.size());
+
+    if (m_cmdStackPos == (int)m_cmdStack.size())
+        return;
+
+    m_cmdStackPos ++;
+
+    restoreCommandsFromStack();
+    //std::cout << "after redo; m_commandStack.size()=" << m_commandStack.size() << "; m_cmdStackPos=" << m_cmdStackPos << std::endl;
     commandStackChanged(m_cmdStack, m_cmdStackPos);
 }
 
 
-void Editor::onStartDrag() {
+void Editor::onDragStarted() {
     assert(m_currCommand == nullptr);
     m_currCommand = ToolConfig::instance().createCommand(m_activeTool);
 }
 
-void Editor::onDrag(const QPoint start, const QPoint end) {
+void Editor::onDragContinued(const QPoint start, const QPoint end) {
     assert(m_currCommand != nullptr);
 
     m_currCommand->addDrag(start, end);
 }
 
-void Editor::onEndDrag() {
+void Editor::onDragEnded() {
     performCurrentCommand();
     pushCurrentCommand();
     assert(m_currCommand == nullptr);
@@ -91,6 +111,8 @@ void Editor::onEndDrag() {
 
 void Editor::onToolChosen(CommandType newToolType) {
     m_activeTool = newToolType;
+    auto currCmd = ToolConfig::instance().getConfig(m_activeTool);
+    cursorChanged(QCursor(currCmd->getCursor()));
 }
 
 void Editor::onToolColorChosen(const QColor & color) {
@@ -114,33 +136,17 @@ void Editor::onToolWidthChosen(int width) {
 }
 
 
-void Editor::undo() {
-    assert(m_cmdStackPos >= 0);
+void Editor::reset(QPixmap &destBuffer, const QPixmap &srcBuffer) {
+    destBuffer = srcBuffer.copy();
 
-    //std::cout << "before undo; m_commandStack.size()=" << m_commandStack.size() << "; m_cmdStackPos=" << m_cmdStackPos << std::endl;
-    if (m_cmdStackPos == 0)
-        return;
+    m_cmdStack.clear();
+    m_cmdStackPos = 0;
 
-    m_cmdStackPos --;
+    m_currCommand = nullptr;
 
-    restoreCommandsFromStack();
-    //std::cout << "after undo; m_commandStack.size()=" << m_commandStack.size() << "; m_cmdStackPos=" << m_cmdStackPos << std::endl;
     commandStackChanged(m_cmdStack, m_cmdStackPos);
 }
 
-void Editor::redo() {
-    //std::cout << "before redo; m_commandStack.size()=" << m_commandStack.size() << "; m_cmdStackPos=" << m_cmdStackPos << std::endl;
-    assert(m_cmdStackPos <= (int)m_cmdStack.size());
-
-    if (m_cmdStackPos == (int)m_cmdStack.size())
-        return;
-
-    m_cmdStackPos ++;
-
-    restoreCommandsFromStack();
-    //std::cout << "after redo; m_commandStack.size()=" << m_commandStack.size() << "; m_cmdStackPos=" << m_cmdStackPos << std::endl;
-    commandStackChanged(m_cmdStack, m_cmdStackPos);
-}
 
 void Editor::setModified(bool isModified) {
     m_isModified = isModified;
@@ -157,6 +163,7 @@ void Editor::performCurrentCommand() {
 void Editor::performCurrentCommand(QPainter &painter) {
     if (m_currCommand != nullptr)
         m_currCommand->perform(painter);
+    somethingDrawn();
 }
 
 
@@ -202,5 +209,6 @@ void Editor::restoreCommandsFromStack() {
     }
 
     setModified();
+    somethingDrawn();
 }
 

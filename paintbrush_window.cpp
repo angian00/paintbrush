@@ -118,8 +118,8 @@ PaintbrushWindow::PaintbrushWindow() {
     connect(saveAction, &QAction::triggered, this, &PaintbrushWindow::onFileSave);
     connect(exitAction, &QAction::triggered, this, &PaintbrushWindow::onFileExit);
 
-    connect(m_undoAction, &QAction::triggered, this, &PaintbrushWindow::onEditUndo);
-    connect(m_redoAction, &QAction::triggered, this, &PaintbrushWindow::onEditRedo);
+    connect(m_undoAction, &QAction::triggered, m_editor, &Editor::onUndo);
+    connect(m_redoAction, &QAction::triggered, m_editor, &Editor::onRedo);
     
     connect(toolSelectAction,       &QAction::triggered, this, [=]() { chooseTool(CommandType::Select); });
     connect(toolDrawAction,         &QAction::triggered, this, [=]() { chooseTool(CommandType::Draw); });
@@ -134,7 +134,14 @@ PaintbrushWindow::PaintbrushWindow() {
 
     //--------------------- connect signals from this ---------------------
     connect(this, &PaintbrushWindow::chooseTool, m_editor, &Editor::onToolChosen);
-    connect(this, &PaintbrushWindow::chooseTool, m_canvas, &PaintbrushCanvas::onToolChosen);
+    connect(m_editor, &Editor::cursorChanged, m_canvas, &PaintbrushCanvas::setCursor);
+
+
+    //--------------------- connect signals/slots between other components ---------------------
+    connect(m_editor, &Editor::somethingDrawn, m_canvas, &PaintbrushCanvas::onSomethingDrawn);
+    connect(m_canvas, &PaintbrushCanvas::dragStarted, m_editor, &Editor::onDragStarted);
+    connect(m_canvas, &PaintbrushCanvas::dragEnded, m_editor, &Editor::onDragEnded);
+    connect(m_canvas, &PaintbrushCanvas::dragContinued, m_editor, &Editor::onDragContinued);
 }
 
 

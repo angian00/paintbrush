@@ -8,11 +8,10 @@
 #include <QColor>
 #include <QPoint>
 #include <QPixmap>
+#include <QCursor>
+
 #include <memory>
 
-
-const int defaultDrawWidth  = 2;
-const int defaultEraseWidth = 10;
 
 
 class Editor : public QObject
@@ -23,30 +22,28 @@ public:
 
     const QPixmap & buffer() { return m_currBuffer; };
 
+    const Command * activeCommand() const;
+
     void newFile();
     bool loadFile(const QString filename);
     bool saveFile(const QString filename);
 
-    void undo();
-    void redo();
-
-    const Command * activeCommand() const;
-
-    //FIXME: transform to slots
-    void onStartDrag();
-    void onEndDrag();
-    void onDrag(const QPoint start, const QPoint end);
-    //
 
     void performCurrentCommand();
     void performCurrentCommand(QPainter &painter);
     void paintToolCursor(QPainter &painter, QPoint &pos);
 
 public slots:
+    void onUndo();
+    void onRedo();
+
     void onToolChosen(CommandType newCommandType);
     void onToolColorChosen(const QColor & color);
     void onToolWidthChosen(int width);
 
+    void onDragStarted();
+    void onDragEnded();
+    void onDragContinued(const QPoint start, const QPoint end);
 
 
 protected:
@@ -72,8 +69,11 @@ protected:
     void restoreCommandsFromStack();
 
 signals:
+    void somethingDrawn();
+    
     void modifiedStatusChanged(bool isDocumentModified);
     void commandStackChanged(std::vector<std::unique_ptr<Command>> &stack, int currStackPos);
+    void cursorChanged(const QCursor &cursor);
 };
 
 #endif // EDITOR_H

@@ -32,7 +32,7 @@ public:
 
     virtual void addDrag(const QPoint from, const QPoint to) = 0;
     virtual void perform(QPainter &painter) const = 0;
-    virtual QCursor getCursor() const { return QCursor(Qt::ArrowCursor); }
+    virtual const Qt::CursorShape getCursor() const { return Qt::ArrowCursor; }
     virtual void paintCustomCursor(QPainter &painter, QPoint pos) const {};
 };
 
@@ -70,7 +70,7 @@ public:
 
     void addDrag(const QPoint from, const QPoint to) override;
     void perform(QPainter &painter) const override;
-    QCursor getCursor() const override { return QCursor(Qt::BlankCursor); }
+    virtual const Qt::CursorShape getCursor() const override { return Qt::BlankCursor; }
     void paintCustomCursor(QPainter &painter, QPoint pos) const override;
 
 protected:
@@ -106,7 +106,7 @@ public:
     CommandType type() const override { return CommandType::Erase; }
     void addDrag(const QPoint from, const QPoint to) override;
     void perform(QPainter &painter) const override;
-    QCursor getCursor() const override { return QCursor(Qt::BlankCursor); }
+    virtual const Qt::CursorShape getCursor() const override { return Qt::BlankCursor; }
     void paintCustomCursor(QPainter &painter, QPoint pos) const override;
 
 protected:
@@ -127,7 +127,7 @@ public:
     CommandType type() const override { return CommandType::Select; }
     void addDrag(const QPoint from, const QPoint to) override;
     void perform(QPainter &painter) const override;
-    QCursor getCursor() const override { return QCursor(Qt::CrossCursor); }
+    virtual const Qt::CursorShape getCursor() const override { return Qt::CrossCursor; }
 
     //void paintCustomCursor(QPainter &painter, QPoint pos) override;
 

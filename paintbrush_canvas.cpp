@@ -19,21 +19,6 @@ PaintbrushCanvas::PaintbrushCanvas(QWidget *parent, Editor *editor) : QWidget(pa
 }
 
 
-void PaintbrushCanvas::onToolChosen(CommandType newTool) {
-    std::cout << "canvas::onToolChosen" << std::endl;
-
-    //TODO: use hash instead
-    switch (newTool) {
-        case Draw:
-        case Erase:
-            //cursor is custom-drawn in paintEvent
-            setCursor(Qt::BlankCursor);
-            break;
-        case Select:
-            setCursor(Qt::CrossCursor);
-    }
-}
-
 
 void PaintbrushCanvas::paintEvent(QPaintEvent * _) {
     QPainter painter { this };
@@ -50,26 +35,23 @@ void PaintbrushCanvas::mouseMoveEvent(QMouseEvent *event) {
 
     if (!(event->buttons() & Qt::LeftButton)) {
         if (m_isDragging) {
-            m_editor->onEndDrag();
+            dragEnded();
             m_isDragging = false;
         }
     
-        update();
         return;
     }
     
     if (!m_isDragging) {
         m_isDragging = true;
-        m_editor->onStartDrag();
+        dragStarted();
         m_dragStart = { event->x(), event->y() };
         return;
     }
 
     QPoint dragEnd { event->x(), event->y() };
 
-    m_editor->onDrag(m_dragStart, dragEnd);
+    dragContinued(m_dragStart, dragEnd);
 
     m_dragStart = dragEnd;
-
-    update();
 }

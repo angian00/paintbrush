@@ -38,19 +38,6 @@ private slots:
     void onFileSave();
     void onFileExit();
 
-    void onEditUndo() {
-        //std::cout << "onEditUndo" << std::endl;
-        m_editor->undo();
-        m_canvas->update();
-    }
-
-    void onEditRedo() {
-        //std::cout << "onEditRedo" << std::endl;
-        m_editor->redo();
-        m_canvas->update();
-    }
-
-
     void onColorChosen(const QColor &color) {
         m_editor->onToolColorChosen(color);
 
