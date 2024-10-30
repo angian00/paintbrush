@@ -1,4 +1,5 @@
 #include "paintbrush_window.h"
+#include "command.h"
 #include "editor.h"
 #include "paintbrush_canvas.h"
 #include "qcolordialog.h"
@@ -120,9 +121,9 @@ PaintbrushWindow::PaintbrushWindow() {
     connect(m_undoAction, &QAction::triggered, this, &PaintbrushWindow::onEditUndo);
     connect(m_redoAction, &QAction::triggered, this, &PaintbrushWindow::onEditRedo);
     
-    connect(toolSelectAction,       &QAction::triggered, this, [=]() { chooseTool(ToolSelect); });
-    connect(toolDrawAction,         &QAction::triggered, this, [=]() { chooseTool(ToolDraw); });
-    connect(toolEraseAction,        &QAction::triggered, this, [=]() { chooseTool(ToolErase); });
+    connect(toolSelectAction,       &QAction::triggered, this, [=]() { chooseTool(CommandType::Select); });
+    connect(toolDrawAction,         &QAction::triggered, this, [=]() { chooseTool(CommandType::Draw); });
+    connect(toolEraseAction,        &QAction::triggered, this, [=]() { chooseTool(CommandType::Erase); });
 
     connect(toolColorChooserAction, &QAction::triggered, this, [=]() { m_colorChooser->show(); });
     connect(m_colorChooser, &QColorDialog::colorSelected, this, &PaintbrushWindow::onColorChosen);
@@ -134,9 +135,8 @@ PaintbrushWindow::PaintbrushWindow() {
     //--------------------- connect signals from this ---------------------
     connect(this, &PaintbrushWindow::chooseTool, m_editor, &Editor::onToolChosen);
     connect(this, &PaintbrushWindow::chooseTool, m_canvas, &PaintbrushCanvas::onToolChosen);
-
-    //--------------------- startup ---------------------
 }
+
 
 void PaintbrushWindow::start(const char *cmdLineArg) {
     onFileNew();
@@ -151,11 +151,15 @@ void PaintbrushWindow::start(const char *cmdLineArg) {
 }
 
 void PaintbrushWindow::onFileNew() {
+    std::cout << "onFileNew" << std::endl;
     m_editor->newFile();
+    std::cout << "after editor->newFile" << std::endl;
     m_windowTitle = "Untitled";
     setWindowTitle(m_windowTitle);
 
-    chooseTool(ToolDraw);
+    chooseTool(CommandType::Draw);
+    std::cout << "after chooseTool" << std::endl;
+
     m_canvas->update();
 }
 
@@ -175,7 +179,7 @@ void PaintbrushWindow::openFile(QString filepath) {
     m_windowTitle = QFileInfo(filepath).fileName();
     setWindowTitle(m_windowTitle);
 
-    chooseTool(ToolDraw);
+    chooseTool(CommandType::Draw);
     m_canvas->update();
 }
 
@@ -208,7 +212,7 @@ void PaintbrushWindow::onModifiedStatusChanged(bool isDocumentModified) {
     setWindowTitle(fullWindowTitle);
 }
 
-void PaintbrushWindow::onCommandStackChanged(std::vector<Command *> stack, int currStackPos) {
+void PaintbrushWindow::onCommandStackChanged(std::vector<std::unique_ptr<Command>> &stack, int currStackPos) {
     m_undoAction->setEnabled( (currStackPos > 0) );
     m_redoAction->setEnabled( (currStackPos < (int)stack.size()) );
 }

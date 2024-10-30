@@ -18,7 +18,7 @@ public:
     explicit PaintbrushCanvas(QWidget *parent, Editor *editor);
     
 public slots:
-    void onToolChosen(ToolType newTool);
+    void onToolChosen(CommandType newTool);
 
 
 protected:
@@ -32,7 +32,7 @@ protected:
     void paintEvent(QPaintEvent *event) override;
     void mouseMoveEvent(QMouseEvent *event) override;
 
-    void paintToolCursor(QPainter &painter, const ToolData * toolData);
+    void paintToolCursor(QPainter &painter, const Command *currCommand);
 
 };
 

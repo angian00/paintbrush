@@ -1,6 +1,7 @@
 #ifndef PAINTBRUSH_WINDOW_H
 #define PAINTBRUSH_WINDOW_H
 
+#include "command.h"
 #include "editor.h"
 #include "paintbrush_canvas.h"
 
@@ -51,19 +52,19 @@ private slots:
 
 
     void onColorChosen(const QColor &color) {
-        m_editor->setActiveColor(color);
+        m_editor->onToolColorChosen(color);
 
         //when you choose a color, draw tool is also selected
-        chooseTool(ToolDraw);
+        chooseTool(CommandType::Draw);
     }
 
 
     //-------- from editor --------
     void onModifiedStatusChanged(bool isDocumentModified);
-    void onCommandStackChanged(std::vector<Command *> stack, int currStackPos);
+    void onCommandStackChanged(std::vector<std::unique_ptr<Command>> &stack, int currStackPos);
 
 signals:
-    void chooseTool(ToolType newTool);
+    void chooseTool(CommandType newCommandType);
 };
 
 

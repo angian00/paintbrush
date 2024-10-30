@@ -8,6 +8,7 @@
 #include <QColor>
 #include <QPoint>
 #include <QPixmap>
+#include <memory>
 
 
 const int defaultDrawWidth  = 2;
@@ -29,19 +30,23 @@ public:
     void undo();
     void redo();
 
-    const ToolData * activeTool() { return m_activeTool; }
+    const Command * activeCommand() const;
 
-    void setActiveColor(const QColor & color) {
-        m_activeColor = color;
-    }
-
+    //FIXME: transform to slots
     void onStartDrag();
     void onEndDrag();
     void onDrag(const QPoint start, const QPoint end);
+    //
 
+    void performCurrentCommand();
+    void performCurrentCommand(QPainter &painter);
+    void paintToolCursor(QPainter &painter, QPoint &pos);
 
 public slots:
-    void onToolChosen(ToolType newToolType);
+    void onToolChosen(CommandType newCommandType);
+    void onToolColorChosen(const QColor & color);
+    void onToolWidthChosen(int width);
+
 
 
 protected:
@@ -53,13 +58,11 @@ protected:
 
     bool m_isModified;
 
-    QColor m_activeColor { Qt::black };
-    //ToolType m_activeTool { ToolType::ToolDraw };
-    ToolData * m_activeTool = new ToolDrawData { m_activeColor, defaultDrawWidth };
+    CommandType m_activeTool;
     
     int m_cmdStackPos = 0;
-    Command *m_currCommand = nullptr;
-    std::vector<Command *> m_cmdStack {};
+    std::unique_ptr<Command> m_currCommand = nullptr;
+    std::vector<std::unique_ptr<Command>> m_cmdStack {};
 
 
     void setModified(bool edited=true);
@@ -67,13 +70,10 @@ protected:
     void reset(QPixmap &destBuffer, const QPixmap &srcBuffer);
     void pushCurrentCommand();
     void restoreCommandsFromStack();
-    void performCommand(struct Command *cmd);
-    void performPartialCommand(struct Command *cmd, const QPair<QPoint, QPoint> line);
-    void updateCurrentCommand(const QPair<QPoint, QPoint> line);
 
 signals:
     void modifiedStatusChanged(bool isDocumentModified);
-    void commandStackChanged(std::vector<Command *> stack, int currStackPos);
+    void commandStackChanged(std::vector<std::unique_ptr<Command>> &stack, int currStackPos);
 };
 
 #endif // EDITOR_H

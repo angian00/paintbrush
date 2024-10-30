@@ -2,116 +2,140 @@
 #define COMMAND_H
 
 
+#include "qnamespace.h"
+#include <QPixmap>
 #include <QColor>
 #include <QPoint>
 #include <QPair>
+#include <QPainter>
+#include <QCursor>
 
 #include <iostream>
 #include <vector>
-#include <variant>
+#include <memory>
 
-
-
-//---- Command ------------------------------------------------------------
 
 enum CommandType {
-    CommandDraw,
-    CommandErase,
+    Select,
+    Draw,
+    Erase,
 };
 
 
-struct Command {
+class Command {
 
 public:
-    explicit Command(CommandType type): m_type(type) {}
-    
-    CommandType type() const { return m_type; }
+    virtual ~Command() = default;
+    virtual std::unique_ptr<Command> clone() const = 0;
 
-protected:
-    CommandType m_type;
+    virtual CommandType type() const = 0;
+
+    virtual void addDrag(const QPoint from, const QPoint to) = 0;
+    virtual void perform(QPainter &painter) const = 0;
+    virtual QCursor getCursor() const { return QCursor(Qt::ArrowCursor); }
+    virtual void paintCustomCursor(QPainter &painter, QPoint pos) const {};
 };
 
 
-struct CommandDraw: Command {
+class CommandDraw: public Command {
 
 public:
-    explicit CommandDraw(QColor color, std::vector<QPair<QPoint, QPoint>> *lines): 
-        Command(CommandType::CommandDraw), m_color(color), m_lines(lines) {}
+    CommandDraw(QColor color, int width): m_width(width), m_color(color) {
+        m_lines = std::make_unique<std::vector<QPair<QPoint, QPoint>>>();
+    }
+
+    CommandDraw(const CommandDraw &other): m_width(other.m_width), m_color(other.m_color) {
+        m_lines = std::make_unique<std::vector<QPair<QPoint, QPoint>>>();
+
+        for (auto line: *other.m_lines) {
+            m_lines->push_back(line);
+        }
+    }
+
+    void setWidth(int width) {
+        m_width = width;
+    }
+
+    void setColor(const QColor &color) {
+        m_color = color;
+    }
+
+    std::unique_ptr<Command> clone() const override {
+        return std::make_unique<CommandDraw>(*this);
+    }
+
+    CommandType type() const override { return CommandType::Draw; }
 
     QColor color() const { return m_color; }
 
-    std::vector<QPair<QPoint, QPoint>> *lines() { return m_lines; }
-
-protected:
-    QColor m_color;
-    std::vector<QPair<QPoint, QPoint>> *m_lines;
-};
-
-
-struct CommandErase: Command {
-
-public:
-    explicit CommandErase(std::vector<QPair<QPoint, QPoint>> *lines): Command(CommandType::CommandErase), m_lines(lines) {}
-
-    std::vector<QPair<QPoint, QPoint>> *lines() { return m_lines; }
-
-protected:
-    std::vector<QPair<QPoint, QPoint>> *m_lines;
-};
-
-
-//---- Tool ------------------------------------------------------------
-
-enum ToolType {
-    ToolDraw,
-    ToolErase,
-    ToolSelect,
-};
-
-struct ToolData {
-public:
-    explicit ToolData(ToolType type): m_type(type) {}
-    virtual ~ToolData() = default;
-
-    ToolType type() const { return m_type; }
-    //virtual int cursorSize() const { std::cout << "ToolData.cursorSize()" <<std::endl; return 0; }
-    virtual int cursorSize() const = 0;
-
-protected:
-    ToolType m_type;
-};
-
-struct ToolDrawData: ToolData {
-public:
-    explicit ToolDrawData(QColor color, int width): ToolData(ToolType::ToolDraw), m_color {color}, m_width(width) {}
-    int width() const { return m_width; }
-    QColor color() const { return m_color; }
-
-    int cursorSize() const override { return m_width; }
-
-protected:
-    QColor m_color;
-    int m_width;
-};
-
-struct ToolEraseData: ToolData {
-public:
-    explicit ToolEraseData(int width): ToolData(ToolType::ToolErase), m_width(width) {}
-    int width() const { return m_width; }
-
-    int cursorSize() const override { return m_width; }
+    void addDrag(const QPoint from, const QPoint to) override;
+    void perform(QPainter &painter) const override;
+    QCursor getCursor() const override { return QCursor(Qt::BlankCursor); }
+    void paintCustomCursor(QPainter &painter, QPoint pos) const override;
 
 protected:
     int m_width;
+    QColor m_color;
+    std::unique_ptr<std::vector<QPair<QPoint, QPoint>>> m_lines;
 };
 
 
-struct ToolSelectData: ToolData {
+class CommandErase: public Command {
+
 public:
-    explicit ToolSelectData(): ToolData(ToolType::ToolSelect) {}
+    CommandErase(int width): m_width(width) {
+        m_lines = std::make_unique<std::vector<QPair<QPoint, QPoint>>>();
+    }
 
-    int cursorSize() const override { return 0; }
+    CommandErase(const CommandErase &other): m_width(other.m_width) {
+        m_lines = std::make_unique<std::vector<QPair<QPoint, QPoint>>>();
 
+        for (auto line: *other.m_lines) {
+            m_lines->push_back(line);
+        }
+    }
+
+    void setWidth(int width) {
+        m_width = width;
+    }
+
+    std::unique_ptr<Command> clone() const override {
+        return std::make_unique<CommandErase>(*this);
+    }
+
+    CommandType type() const override { return CommandType::Erase; }
+    void addDrag(const QPoint from, const QPoint to) override;
+    void perform(QPainter &painter) const override;
+    QCursor getCursor() const override { return QCursor(Qt::BlankCursor); }
+    void paintCustomCursor(QPainter &painter, QPoint pos) const override;
+
+protected:
+    int m_width;
+    std::unique_ptr<std::vector<QPair<QPoint, QPoint>>> m_lines;
 };
+
+
+class CommandSelect: public Command {
+
+public:
+    CommandSelect() {}
+
+    std::unique_ptr<Command> clone() const override {
+        return std::make_unique<CommandSelect>(*this);
+    }
+
+    CommandType type() const override { return CommandType::Select; }
+    void addDrag(const QPoint from, const QPoint to) override;
+    void perform(QPainter &painter) const override;
+    QCursor getCursor() const override { return QCursor(Qt::CrossCursor); }
+
+    //void paintCustomCursor(QPainter &painter, QPoint pos) override;
+
+protected:
+    QPoint m_from;
+    QPoint m_to;
+};
+
+
 
 #endif // COMMAND_H

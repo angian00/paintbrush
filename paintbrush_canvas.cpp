@@ -19,14 +19,17 @@ PaintbrushCanvas::PaintbrushCanvas(QWidget *parent, Editor *editor) : QWidget(pa
 }
 
 
-void PaintbrushCanvas::onToolChosen(ToolType newTool) {
+void PaintbrushCanvas::onToolChosen(CommandType newTool) {
+    std::cout << "canvas::onToolChosen" << std::endl;
+
+    //TODO: use hash instead
     switch (newTool) {
-        case ToolDraw:
-        case ToolErase:
+        case Draw:
+        case Erase:
             //cursor is custom-drawn in paintEvent
             setCursor(Qt::BlankCursor);
             break;
-        case ToolSelect:
+        case Select:
             setCursor(Qt::CrossCursor);
     }
 }
@@ -35,7 +38,10 @@ void PaintbrushCanvas::onToolChosen(ToolType newTool) {
 void PaintbrushCanvas::paintEvent(QPaintEvent * _) {
     QPainter painter { this };
     painter.drawPixmap(0, 0, m_editor->buffer());
-    paintToolCursor(painter, m_editor->activeTool());
+    m_editor->performCurrentCommand(painter);
+
+    QPainter painter2 { this };
+    m_editor->paintToolCursor(painter2, m_currMousePos);
 }
 
 
@@ -66,33 +72,4 @@ void PaintbrushCanvas::mouseMoveEvent(QMouseEvent *event) {
     m_dragStart = dragEnd;
 
     update();
-}
-
-void drawCursorCircle(QPainter &painter, QPoint center, int radius);
-
-void PaintbrushCanvas::paintToolCursor(QPainter &painter, const ToolData *toolData) {
-    const ToolType toolType = toolData->type();
-    
-    switch (toolType) {
-        case ToolDraw:
-        case ToolErase: 
-            {
-                auto radius = toolData->cursorSize()/2;
-                drawCursorCircle(painter, m_currMousePos, radius);
-            }
-            break;
-        
-        default:
-            ; //no custom painting, rely on QCursor
-    }
-}
-
-
-void drawCursorCircle(QPainter &painter, QPoint center, int radius) {
-    const QColor cursorColor = Qt::black;
-
-    //std::cout << "drawCursorCircle; radius=" << radius << std::endl;
-
-    painter.setBrush(cursorColor);
-    painter.drawEllipse(center.x() - radius, center.y() - radius, radius * 2, radius * 2);
 }

@@ -1,15 +1,18 @@
 #include "editor.h"
+
+#include "constants.h"
 #include "command.h"
+#include "tool_config.h"
 #include "paintbrush_window.h"
-#include "qpixmap.h"
 
 #include <QPainter>
+#include <QPixmap>
 #include <QPen>
 
 #include <iostream>
+#include <memory>
 
 
-const QColor& bkgColor { QColorConstants::LightGray };
 
 
 Editor::Editor(int width, int height): 
@@ -60,80 +63,56 @@ void Editor::reset(QPixmap &destBuffer, const QPixmap &srcBuffer) {
     m_cmdStack.clear();
     m_cmdStackPos = 0;
 
-    if (m_currCommand) {
-        delete m_currCommand;
-        m_currCommand = nullptr;
-    }
+    m_currCommand = nullptr;
 
     commandStackChanged(m_cmdStack, m_cmdStackPos);
 }
 
-void Editor::setModified(bool isModified) {
-    m_isModified = isModified;
-    modifiedStatusChanged(isModified);
-}
-
 
 void Editor::onStartDrag() {
-    struct Command *newCommand;
-
-    switch (m_activeTool->type()) {
-        case ToolDraw: {
-                auto lines =  new std::vector<QPair<QPoint, QPoint>>;
-                newCommand = new struct CommandDraw(m_activeColor, lines);
-            }
-            break;
-        case ToolErase: {
-                auto lines =  new std::vector<QPair<QPoint, QPoint>>;
-                newCommand = new struct CommandErase(lines);
-            }
-            break;
-
-        default:
-            return;
-    }
-
-    m_currCommand = newCommand;
-}
-
-void Editor::onEndDrag() {
-    switch (m_activeTool->type()) {
-        case ToolDraw:
-        case ToolErase:
-            pushCurrentCommand();
-            break;
-        
-        default:
-            ;
-    }
+    assert(m_currCommand == nullptr);
+    m_currCommand = ToolConfig::instance().createCommand(m_activeTool);
 }
 
 void Editor::onDrag(const QPoint start, const QPoint end) {
     assert(m_currCommand != nullptr);
 
-    QPair<QPoint,QPoint> newLine {start, end};
-    performPartialCommand(m_currCommand, newLine);
-    updateCurrentCommand(newLine);
+    m_currCommand->addDrag(start, end);
+}
+
+void Editor::onEndDrag() {
+    performCurrentCommand();
+    pushCurrentCommand();
+    assert(m_currCommand == nullptr);
+
+    commandStackChanged(m_cmdStack, m_cmdStackPos);
 }
 
 
-void Editor::onToolChosen(ToolType newToolType) {
-    if (m_activeTool->type() == newToolType)
-        return;
-    
-    delete m_activeTool;
+void Editor::onToolChosen(CommandType newToolType) {
+    m_activeTool = newToolType;
+}
 
-    switch (newToolType) {
-        case ToolDraw:
-            m_activeTool = new ToolDrawData {m_activeColor, defaultDrawWidth};
+void Editor::onToolColorChosen(const QColor & color) {
+    Command * cmdDraw = ToolConfig::instance().getConfig(CommandType::Draw);
+    (static_cast<CommandDraw *>(cmdDraw))->setColor(color);
+}
+
+void Editor::onToolWidthChosen(int width) {
+    Command *currCmd = ToolConfig::instance().getConfig(m_activeTool);
+    //FIXME: improve pattern
+    switch (m_activeTool) {
+        case Draw:
+            (static_cast<CommandDraw *>(currCmd))->setWidth(width);
             break;
-        case ToolErase:
-            m_activeTool = new ToolEraseData {defaultEraseWidth};
+        case Erase:
+            (static_cast<CommandErase *>(currCmd))->setWidth(width);
             break;
         default:
-            m_activeTool = new ToolSelectData();
+            ; //ignore
     }
 }
+
 
 void Editor::undo() {
     assert(m_cmdStackPos >= 0);
@@ -163,6 +142,29 @@ void Editor::redo() {
     commandStackChanged(m_cmdStack, m_cmdStackPos);
 }
 
+void Editor::setModified(bool isModified) {
+    m_isModified = isModified;
+    modifiedStatusChanged(isModified);
+}
+
+
+void Editor::performCurrentCommand() {
+    QPainter painter {&m_currBuffer};
+    performCurrentCommand(painter);
+}
+
+
+void Editor::performCurrentCommand(QPainter &painter) {
+    if (m_currCommand != nullptr)
+        m_currCommand->perform(painter);
+}
+
+
+void Editor::paintToolCursor(QPainter &painter, QPoint &pos) {
+    auto currToolConfig = ToolConfig::instance().getConfig(m_activeTool);
+    currToolConfig->paintCustomCursor(painter, pos);
+}
+
 
 void Editor::pushCurrentCommand() {
     //std::cout << "pushCurrentCommand" << std::endl;
@@ -172,12 +174,11 @@ void Editor::pushCurrentCommand() {
 
     for (int cmdDiscardPos = (int)m_cmdStack.size()-1; cmdDiscardPos >= m_cmdStackPos; cmdDiscardPos--) {
         // previously undoed commands are discarded when a new command is requested
-        struct Command *discardedCmd = m_cmdStack[cmdDiscardPos];
-        delete discardedCmd;
         m_cmdStack.erase(m_cmdStack.begin() + cmdDiscardPos);
     }
     
-    m_cmdStack.push_back(m_currCommand);
+    //m_cmdStack.push_back(m_currCommand);
+    m_cmdStack.push_back(std::move(m_currCommand));
     m_cmdStackPos ++;
 
     //std::cout << "after push; m_commandStack.size()=" << m_commandStack.size() << "; m_cmdStackPos=" << m_cmdStackPos << std::endl;
@@ -191,83 +192,15 @@ void Editor::pushCurrentCommand() {
 
 void Editor::restoreCommandsFromStack() {
     m_currBuffer = m_initialBuffer.copy();
+    QPainter painter {&m_currBuffer};
     setModified(false);
 
     for (int i=0; i < m_cmdStackPos && i < (int)m_cmdStack.size(); ++i) {
         m_isModified = true;
         //std::cout << "Restoring command #" << i << std::endl;
-        performCommand(m_cmdStack[i]);
-    }
-}
-
-void Editor::performCommand(struct Command *cmd) {
-    //std::cout << "performCommand; cmd=" << cmd << std::endl;
-
-    switch (cmd->type()) {
-        case CommandDraw:
-            {
-                struct CommandDraw *cmdDraw = static_cast<struct CommandDraw *> (cmd);
-                auto lines = *(cmdDraw->lines());
-                for (auto line: lines) {
-                    performPartialCommand(cmd, line);
-                }
-            }
-            break;
-        
-        case CommandErase:
-            {
-                struct CommandErase *cmdErase = static_cast<struct CommandErase *> (cmd);
-                auto lines = *(cmdErase->lines());
-                for (auto line: lines) {
-                    performPartialCommand(cmd, line);
-                }
-            }
-            break;
+        m_cmdStack[i]->perform(painter);
     }
 
     setModified();
-}
-
-void Editor::performPartialCommand(struct Command *cmd, const QPair<QPoint, QPoint> line) {
-    QColor drawColor;
-    int drawWidth;
-    switch (cmd->type()) {
-        case CommandDraw:
-            {
-                struct CommandDraw *cmdDraw = static_cast<struct CommandDraw *> (cmd);
-                drawColor = cmdDraw->color();
-                drawWidth = 2;
-            }
-            break;
-
-        case CommandErase:
-            {
-                drawColor = bkgColor;
-                drawWidth = 10;
-            }
-            break;
-    }
-
-    QPainter painter {&m_currBuffer};
-    painter.setPen(QPen(drawColor, drawWidth));
-    painter.drawLine(line.first, line.second);
-}
-
-void Editor::updateCurrentCommand(const QPair<QPoint, QPoint> line) {
-    switch (m_currCommand->type()) {
-        case CommandDraw:
-            {
-                struct CommandDraw *cmdDraw = static_cast<struct CommandDraw *> (m_currCommand);
-                cmdDraw->lines()->push_back(line);
-            }
-            break;
-        
-        case CommandErase:
-            {
-                struct CommandErase *cmdErase = static_cast<struct CommandErase *> (m_currCommand);
-                cmdErase->lines()->push_back(line);
-            }
-            break;
-    }
 }
 
