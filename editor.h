@@ -3,6 +3,7 @@
 
 
 #include "command.h"
+#include "qpaintdevice.h"
 
 #include <QObject>
 #include <QColor>
@@ -23,15 +24,20 @@ public:
     const QPixmap & buffer() { return m_currBuffer; };
 
     const Command * activeCommand() const;
+    void setCurrentSelection(QRect selection) {
+        m_currSelection = selection;
+        somethingDrawn();
+    }
 
     void newFile();
     bool loadFile(const QString filename);
     bool saveFile(const QString filename);
 
 
-    void performCurrentCommand();
-    void performCurrentCommand(QPainter &painter);
-    void paintToolCursor(QPainter &painter, QPoint &pos);
+    void paintCurrentBuffer(QPaintDevice * target=nullptr);
+    void performCurrentCommand(QPaintDevice * target=nullptr);
+    void paintToolCursor(QPoint &pos, QPaintDevice * target=nullptr);
+    void paintCurrentSelection(QPaintDevice * target=nullptr);
 
 public slots:
     void onUndo();
@@ -41,8 +47,8 @@ public slots:
     void onToolColorChosen(const QColor & color);
     void onToolWidthChosen(int width);
 
-    void onDragStarted();
-    void onDragEnded();
+    void onDragStarted(const QPoint pos);
+    void onDragEnded(const QPoint pos);
     void onDragContinued(const QPoint start, const QPoint end);
 
 
@@ -56,6 +62,7 @@ protected:
     bool m_isModified;
 
     CommandType m_activeTool;
+    QRect m_currSelection;
     
     int m_cmdStackPos = 0;
     std::unique_ptr<Command> m_currCommand = nullptr;

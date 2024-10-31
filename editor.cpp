@@ -89,23 +89,37 @@ void Editor::onRedo() {
 }
 
 
-void Editor::onDragStarted() {
+void Editor::onDragStarted(const QPoint pos) {
     assert(m_currCommand == nullptr);
+
     m_currCommand = ToolConfig::instance().createCommand(m_activeTool);
+    m_currCommand->setEditor(this);
+    m_currCommand->startDrag(pos);
 }
 
 void Editor::onDragContinued(const QPoint start, const QPoint end) {
     assert(m_currCommand != nullptr);
 
-    m_currCommand->addDrag(start, end);
+    m_currCommand->continueDrag(start, end);
+    // //DEBUG
+    // if (m_currCommand->type() == CommandType::Select) {
+    //     auto cmdSelect = static_cast<CommandSelect *>(m_currCommand.get());
+    //     m_currSelection = cmdSelect->selectionArea();
+    // }
+    // //
 }
 
-void Editor::onDragEnded() {
+void Editor::onDragEnded(const QPoint pos) {
     performCurrentCommand();
-    pushCurrentCommand();
+    if (m_currCommand->isModifying()) {
+        pushCurrentCommand();
+        commandStackChanged(m_cmdStack, m_cmdStackPos);
+    } else {
+        m_currCommand.reset();
+    }
+
     assert(m_currCommand == nullptr);
 
-    commandStackChanged(m_cmdStack, m_cmdStackPos);
 }
 
 
@@ -154,22 +168,47 @@ void Editor::setModified(bool isModified) {
 }
 
 
-void Editor::performCurrentCommand() {
-    QPainter painter {&m_currBuffer};
-    performCurrentCommand(painter);
-}
+void Editor::performCurrentCommand(QPaintDevice * target) {
+    if (m_currCommand == nullptr) 
+        return;
+    
+    if (target == nullptr)
+        target = &m_currBuffer;
 
-
-void Editor::performCurrentCommand(QPainter &painter) {
-    if (m_currCommand != nullptr)
-        m_currCommand->perform(painter);
+    QPainter painter {target};
+    m_currCommand->perform(painter);
     somethingDrawn();
 }
 
+void Editor::paintCurrentBuffer(QPaintDevice * target) {
+    if (target == nullptr)
+        target = &m_currBuffer;
 
-void Editor::paintToolCursor(QPainter &painter, QPoint &pos) {
+    QPainter painter { target };
+    painter.drawPixmap(0, 0, m_currBuffer);
+}
+
+void Editor::paintToolCursor(QPoint &pos, QPaintDevice * target) {
+    if (target == nullptr)
+        target = &m_currBuffer;
+
+    QPainter painter {target};
+
     auto currToolConfig = ToolConfig::instance().getConfig(m_activeTool);
     currToolConfig->paintCustomCursor(painter, pos);
+}
+
+void Editor::paintCurrentSelection(QPaintDevice * target) {
+    if (m_currSelection.size().isEmpty())
+        return;
+
+    if (target == nullptr)
+        target = &m_currBuffer;
+
+    QPainter painter {target};
+
+    painter.setPen(QPen(Qt::DashLine));
+    painter.drawRect(m_currSelection);
 }
 
 

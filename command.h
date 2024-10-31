@@ -15,6 +15,8 @@
 #include <memory>
 
 
+class Editor;
+
 enum CommandType {
     Select,
     Draw,
@@ -25,15 +27,22 @@ enum CommandType {
 class Command {
 
 public:
+    void setEditor(Editor *editor) { m_editor = editor; }
+
     virtual ~Command() = default;
     virtual std::unique_ptr<Command> clone() const = 0;
 
     virtual CommandType type() const = 0;
+    virtual bool isModifying() const { return false; };
 
-    virtual void addDrag(const QPoint from, const QPoint to) = 0;
-    virtual void perform(QPainter &painter) const = 0;
+    virtual void startDrag(const QPoint pos) {};
+    virtual void continueDrag(const QPoint from, const QPoint to) {};
+    virtual void perform(QPainter &painter) const = 0; //TODO: change perform signature to use buffer
     virtual const Qt::CursorShape getCursor() const { return Qt::ArrowCursor; }
     virtual void paintCustomCursor(QPainter &painter, QPoint pos) const {};
+
+protected:
+    Editor *m_editor;
 };
 
 
@@ -65,10 +74,11 @@ public:
     }
 
     CommandType type() const override { return CommandType::Draw; }
+    virtual bool isModifying() const override { return true; };
 
     QColor color() const { return m_color; }
 
-    void addDrag(const QPoint from, const QPoint to) override;
+    void continueDrag(const QPoint from, const QPoint to) override;
     void perform(QPainter &painter) const override;
     virtual const Qt::CursorShape getCursor() const override { return Qt::BlankCursor; }
     void paintCustomCursor(QPainter &painter, QPoint pos) const override;
@@ -104,8 +114,11 @@ public:
     }
 
     CommandType type() const override { return CommandType::Erase; }
-    void addDrag(const QPoint from, const QPoint to) override;
+    virtual bool isModifying() const override { return true; };
+
+    void continueDrag(const QPoint from, const QPoint to) override;
     void perform(QPainter &painter) const override;
+    
     virtual const Qt::CursorShape getCursor() const override { return Qt::BlankCursor; }
     void paintCustomCursor(QPainter &painter, QPoint pos) const override;
 
@@ -125,7 +138,10 @@ public:
     }
 
     CommandType type() const override { return CommandType::Select; }
-    void addDrag(const QPoint from, const QPoint to) override;
+
+    void startDrag(const QPoint pos) override;
+    void continueDrag(const QPoint from, const QPoint to) override;
+
     void perform(QPainter &painter) const override;
     virtual const Qt::CursorShape getCursor() const override { return Qt::CrossCursor; }
 

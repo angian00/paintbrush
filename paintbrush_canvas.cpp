@@ -21,37 +21,40 @@ PaintbrushCanvas::PaintbrushCanvas(QWidget *parent, Editor *editor) : QWidget(pa
 
 
 void PaintbrushCanvas::paintEvent(QPaintEvent * _) {
-    QPainter painter { this };
-    painter.drawPixmap(0, 0, m_editor->buffer());
-    m_editor->performCurrentCommand(painter);
+    m_editor->paintCurrentBuffer(this);
+    m_editor->performCurrentCommand(this);
 
-    QPainter painter2 { this };
-    m_editor->paintToolCursor(painter2, m_currMousePos);
+    m_editor->paintToolCursor(m_currMousePos, this);
+    m_editor->paintCurrentSelection(this);
 }
 
 
 void PaintbrushCanvas::mouseMoveEvent(QMouseEvent *event) {
     m_currMousePos = event->pos();
-
-    if (!(event->buttons() & Qt::LeftButton)) {
-        if (m_isDragging) {
-            dragEnded();
-            m_isDragging = false;
-        }
+    update();
     
+    if (!m_isDragging)
         return;
-    }
-    
-    if (!m_isDragging) {
-        m_isDragging = true;
-        dragStarted();
-        m_dragStart = { event->x(), event->y() };
-        return;
-    }
 
     QPoint dragEnd { event->x(), event->y() };
 
     dragContinued(m_dragStart, dragEnd);
 
     m_dragStart = dragEnd;
+}
+
+
+void PaintbrushCanvas::mousePressEvent(QMouseEvent *event) {
+    if ((!m_isDragging) && (event->buttons() & Qt::LeftButton)) {
+        m_isDragging = true;
+        m_dragStart = { event->x(), event->y() };
+        dragStarted(event->pos());
+    }
+}
+
+void PaintbrushCanvas::mouseReleaseEvent(QMouseEvent *event) {
+    if ((m_isDragging) && !(event->buttons() & Qt::LeftButton)) {
+        m_isDragging = false;
+        dragEnded(event->pos());
+    }
 }

@@ -30,12 +30,14 @@ protected:
 
     void paintEvent(QPaintEvent *event) override;
     void mouseMoveEvent(QMouseEvent *event) override;
+    void mousePressEvent(QMouseEvent *event) override;
+    void mouseReleaseEvent(QMouseEvent *event) override;
 
     //void paintToolCursor(QPainter &painter, const Command *currCommand);
 
 signals:
-    void dragStarted();
-    void dragEnded();
+    void dragStarted(QPoint pos);
+    void dragEnded(QPoint pos);
     void dragContinued(const QPoint start, const QPoint end);
 };
 
