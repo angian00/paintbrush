@@ -1,8 +1,5 @@
 ## TODO
-- scelta width (tool settings)
-- visual feedback current color
 - "save as" vs "save"
-- deselect
 
 - copy/cut/paste
 
@@ -11,6 +8,7 @@
 
 + brush hardness and shape
 + import images
++ zoom
 
 + layers
 + filtri di convoluzione

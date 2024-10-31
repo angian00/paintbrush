@@ -2,6 +2,7 @@
 
 
 #include "command.h"
+#include "constants.h"
 
 #include <algorithm>
 #include <memory>
@@ -19,10 +20,10 @@ ToolConfig::ToolConfig() {
                 cmdConfig = new CommandSelect {};
                 break;
             case Draw: 
-                cmdConfig = new CommandDraw {Qt::black, 5};
+                cmdConfig = new CommandDraw {Qt::black, defaultDrawWidth };
                 break;
             case Erase:
-                cmdConfig = new CommandErase { 20 };
+                cmdConfig = new CommandErase { defaultDrawWidth * 4 };
                 break;
         }
         

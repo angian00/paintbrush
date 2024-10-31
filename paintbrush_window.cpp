@@ -1,8 +1,10 @@
+#include "constants.h"
 #include "paintbrush_window.h"
 #include "command.h"
 #include "editor.h"
+#include "qnamespace.h"
+#include "tool_config.h"
 #include "paintbrush_canvas.h"
-#include "qcolordialog.h"
 
 #include <QApplication>
 #include <QAction>
@@ -10,6 +12,11 @@
 #include <QMenu>
 #include <QToolBar>
 #include <QColorDialog>
+#include <QFrame>
+#include <QVBoxLayout>
+#include <QPushButton>
+#include <QSpinBox>
+#include <QLabel>
 
 #include <iostream>
 
@@ -27,7 +34,14 @@ PaintbrushWindow::PaintbrushWindow() {
     m_editor = new Editor { documentWidth, documentHeight };
     m_canvas = new PaintbrushCanvas { this, m_editor };
 
+    m_colorChooser = new QColorDialog(this);
+    initActions();
+    initToolSettingsPanel();
+    initLayout();
+}
 
+
+void PaintbrushWindow::initActions() {
     auto newAction = new QAction("New", this);
     newAction->setToolTip("New file");
     newAction->setShortcut(QKeySequence("Ctrl+N"));
@@ -62,9 +76,13 @@ PaintbrushWindow::PaintbrushWindow() {
     m_selectNoneAction->setShortcut(QKeySequence("Shift+Ctrl+A"));
 
 
-    auto toolColorChooserAction = new QAction("Choose Color", this);
-    toolColorChooserAction->setIcon(QIcon("images/color-filter.svg"));
-    toolColorChooserAction->setToolTip("Choose color");
+    m_toolColorChooserAction = new QAction("Choose Color", this);
+    //m_toolColorChooserAction->setIcon(QIcon(m_colorThumbnail));
+    m_toolColorChooserAction->setToolTip("Choose color");
+
+    m_toolWidthAction = new QAction("Choose Width", this);
+    //m_toolWidthAction->setIcon(QIcon(m_widthThumbnail));
+    m_toolWidthAction->setToolTip("Choose width");
 
     auto toolSelectAction = new QAction("Select", this);
     toolSelectAction->setIcon(QIcon("images/square3d-corner-to-corner.svg"));
@@ -112,18 +130,32 @@ PaintbrushWindow::PaintbrushWindow() {
     //--------------------------- tool bar ---------------------------
 
     auto toolBar = new QToolBar(this);
-    toolBar->setIconSize(QSize(32, 32));
+    toolBar->setIconSize(QSize(toolThumbnailSize, toolThumbnailSize));
     toolBar->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
     addToolBar(Qt::LeftToolBarArea, toolBar);
 
+    // toolBar->addAction(m_toolColorChooserAction);
+    // toolBar->addAction(m_toolWidthAction);
+
+    // toolBar->addSeparator();
+
     toolBar->addAction(toolSelectAction);
-    toolBar->addAction(toolColorChooserAction);
     toolBar->addAction(toolDrawAction);
     toolBar->addAction(toolEraseAction);
+
     toolBar->addSeparator();
 
+    //---------------------- tool settings ---------------------------
 
-    m_colorChooser = new QColorDialog(this);
+
+    // auto toolSettingsBar = new QToolBar(this);
+    // toolSettingsBar->setIconSize(QSize(toolThumbnailSize, toolThumbnailSize));
+    // toolSettingsBar->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
+    // addToolBar(Qt::TopToolBarArea, toolSettingsBar);
+
+    // toolSettingsBar->addAction(m_toolColorChooserAction);
+    // toolSettingsBar->addAction(m_toolWidthAction);
+    // toolBar->addSeparator();
 
     //--------------------- connect slots from ui input ---------------------
 
@@ -142,8 +174,9 @@ PaintbrushWindow::PaintbrushWindow() {
     connect(toolDrawAction,         &QAction::triggered, this, [=]() { chooseTool(CommandType::Draw); });
     connect(toolEraseAction,        &QAction::triggered, this, [=]() { chooseTool(CommandType::Erase); });
 
-    connect(toolColorChooserAction, &QAction::triggered, this, [=]() { m_colorChooser->show(); });
+    connect(m_toolColorChooserAction, &QAction::triggered, this, [=]() { m_colorChooser->show(); });
     connect(m_colorChooser, &QColorDialog::colorSelected, this, &PaintbrushWindow::onColorChosen);
+    connect(m_toolWidthAction, &QAction::triggered, this, &PaintbrushWindow::onWidthChosen);
 
     //--------------------- connect slots from editor ---------------------
     connect(m_editor, &Editor::modifiedStatusChanged, this, &PaintbrushWindow::onModifiedStatusChanged);
@@ -162,6 +195,40 @@ PaintbrushWindow::PaintbrushWindow() {
 }
 
 
+void PaintbrushWindow::initToolSettingsPanel() {
+    m_toolSettingsPanel = new QWidget(this);
+    auto toolSettingsPanelLayout = new QHBoxLayout(m_toolSettingsPanel);
+
+    m_chooseColorButton = new QPushButton(this);
+    m_chooseColorButton->setFlat(true);
+    m_chooseColorButton->setIconSize(QSize {toolThumbnailSize, toolThumbnailSize});
+    connect(m_chooseColorButton, &QPushButton::clicked, this, [=](bool _) { m_colorChooser->show(); });
+
+    m_widthThumbnail = new QLabel(this);
+
+    m_chooseWidthControl = new QSpinBox(this);
+    m_chooseWidthControl->setMinimum(1);
+    m_chooseWidthControl->setMaximum(maxDrawWidth);
+    connect(m_chooseWidthControl, QOverload<int>::of(&QSpinBox::valueChanged), this, &PaintbrushWindow::onWidthChosen);
+    
+    toolSettingsPanelLayout->addWidget(m_chooseColorButton);
+    toolSettingsPanelLayout->addSpacing(1);
+    toolSettingsPanelLayout->addWidget(m_widthThumbnail);
+    toolSettingsPanelLayout->addWidget(m_chooseWidthControl);
+    toolSettingsPanelLayout->addStretch();
+}
+
+void PaintbrushWindow::initLayout() {
+    QWidget *centralWidget = new QWidget(this);
+    setCentralWidget(centralWidget);
+    auto mainLayout = new QVBoxLayout(centralWidget);
+
+    mainLayout->addWidget(m_toolSettingsPanel);
+    mainLayout->addWidget(m_canvas);
+}
+
+
+
 void PaintbrushWindow::start(const char *cmdLineArg) {
     onFileNew();
     
@@ -175,16 +242,12 @@ void PaintbrushWindow::start(const char *cmdLineArg) {
 }
 
 void PaintbrushWindow::onFileNew() {
-    std::cout << "onFileNew" << std::endl;
     m_editor->newFile();
-    std::cout << "after editor->newFile" << std::endl;
     m_windowTitle = "Untitled";
     setWindowTitle(m_windowTitle);
 
-    chooseTool(CommandType::Draw);
-    std::cout << "after chooseTool" << std::endl;
-
-    m_canvas->update();
+    onColorChosen(defaultDrawColor);
+    onWidthChosen(defaultDrawWidth);
 }
 
 void PaintbrushWindow::onFileOpen() {
@@ -203,8 +266,8 @@ void PaintbrushWindow::openFile(QString filepath) {
     m_windowTitle = QFileInfo(filepath).fileName();
     setWindowTitle(m_windowTitle);
 
-    chooseTool(CommandType::Draw);
-    m_canvas->update();
+    onColorChosen(defaultDrawColor);
+    onWidthChosen(defaultDrawWidth);
 }
 
 void PaintbrushWindow::onFileSave() {
@@ -228,6 +291,23 @@ void PaintbrushWindow::onFileExit() {
 }
 
 
+void PaintbrushWindow::onColorChosen(const QColor & color) {
+    updateColorThumbnail(color);
+    m_editor->onToolColorChosen(color);
+
+    //when you choose a color, draw tool is also selected
+    chooseTool(CommandType::Draw);
+}
+
+void PaintbrushWindow::onWidthChosen(int width) {
+    if (m_chooseWidthControl->value() != width)
+        m_chooseWidthControl->setValue(width);
+    
+    updateWidthThumbnail(width);
+    m_editor->onToolWidthChosen(width);
+}
+
+
 void PaintbrushWindow::onModifiedStatusChanged(bool isDocumentModified) {
     auto fullWindowTitle = m_windowTitle;
     if (isDocumentModified)
@@ -239,4 +319,28 @@ void PaintbrushWindow::onModifiedStatusChanged(bool isDocumentModified) {
 void PaintbrushWindow::onCommandStackChanged(std::vector<std::unique_ptr<Command>> &stack, int currStackPos) {
     m_undoAction->setEnabled( (currStackPos > 0) );
     m_redoAction->setEnabled( (currStackPos < (int)stack.size()) );
+}
+
+
+void PaintbrushWindow::updateColorThumbnail(const QColor & color) {
+    QPixmap thumbnail {toolThumbnailSize, toolThumbnailSize};
+    thumbnail.fill(color);
+
+    m_toolColorChooserAction->setIcon(QIcon(thumbnail));
+    m_chooseColorButton->setIcon(QIcon(thumbnail));
+}
+
+void PaintbrushWindow::updateWidthThumbnail(int width) {
+    QPixmap thumbnail {toolThumbnailSize, toolThumbnailSize};
+    thumbnail.fill(bkgColor);
+
+    QPoint lineWidthFrom { toolThumbnailSize/4, toolThumbnailSize/2 };
+    QPoint lineWidthTo { toolThumbnailSize*3/4, toolThumbnailSize/2 };
+
+    QPainter painter{&thumbnail};
+    painter.setPen(QPen(defaultDrawColor, width));
+    painter.drawLine(lineWidthFrom, lineWidthTo);
+    
+    m_toolWidthAction->setIcon(QIcon(thumbnail));
+    m_widthThumbnail->setPixmap(thumbnail);
 }
