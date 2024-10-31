@@ -5,8 +5,9 @@
 - deselect
 
 - copy/cut/paste
-- bucket fill
-- draw only inside selection
+
++ bucket fill
++ draw only inside selection
 
 + brush hardness and shape
 + import images

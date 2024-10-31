@@ -53,6 +53,14 @@ PaintbrushWindow::PaintbrushWindow() {
     m_redoAction->setToolTip("Redo previous action");
     m_redoAction->setShortcut(QKeySequence("Ctrl+Y"));
 
+    auto m_selectAllAction = new QAction("Select All", this);
+    m_selectAllAction->setToolTip("Select all");
+    m_selectAllAction->setShortcut(QKeySequence("Ctrl+A"));
+
+    auto m_selectNoneAction = new QAction("Select None", this);
+    m_selectNoneAction->setToolTip("Select none");
+    m_selectNoneAction->setShortcut(QKeySequence("Shift+Ctrl+A"));
+
 
     auto toolColorChooserAction = new QAction("Choose Color", this);
     toolColorChooserAction->setIcon(QIcon("images/color-filter.svg"));
@@ -79,7 +87,7 @@ PaintbrushWindow::PaintbrushWindow() {
     auto menuBar = new QMenuBar {this};
     setMenuBar(menuBar);
 
-    auto fileMenu = new QMenu { "File", this};
+    auto fileMenu = new QMenu {"File", this};
     menuBar->addMenu(fileMenu);
 
     fileMenu->addAction(newAction);
@@ -89,11 +97,17 @@ PaintbrushWindow::PaintbrushWindow() {
     fileMenu->addAction(exitAction);
 
 
-    auto editMenu = new QMenu { "Edit", this};
+    auto editMenu = new QMenu {"Edit", this};
     menuBar->addMenu(editMenu);
 
     editMenu->addAction(m_undoAction);
     editMenu->addAction(m_redoAction);    
+
+    auto selectMenu = new QMenu {"Select", this};
+    menuBar->addMenu(selectMenu);
+
+    selectMenu->addAction(m_selectAllAction);
+    selectMenu->addAction(m_selectNoneAction);    
 
     //--------------------------- tool bar ---------------------------
 
@@ -120,6 +134,9 @@ PaintbrushWindow::PaintbrushWindow() {
 
     connect(m_undoAction, &QAction::triggered, m_editor, &Editor::onUndo);
     connect(m_redoAction, &QAction::triggered, m_editor, &Editor::onRedo);
+    
+    connect(m_selectAllAction, &QAction::triggered, m_editor, &Editor::onSelectAll);
+    connect(m_selectNoneAction, &QAction::triggered, m_editor, &Editor::onSelectNone);
     
     connect(toolSelectAction,       &QAction::triggered, this, [=]() { chooseTool(CommandType::Select); });
     connect(toolDrawAction,         &QAction::triggered, this, [=]() { chooseTool(CommandType::Draw); });

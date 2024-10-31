@@ -43,6 +43,9 @@ public slots:
     void onUndo();
     void onRedo();
 
+    void onSelectAll();
+    void onSelectNone();
+
     void onToolChosen(CommandType newCommandType);
     void onToolColorChosen(const QColor & color);
     void onToolWidthChosen(int width);

@@ -89,6 +89,17 @@ void Editor::onRedo() {
 }
 
 
+void Editor::onSelectAll() {
+    m_currSelection = QRect {0, 0, m_width, m_height};
+    somethingDrawn();
+}
+
+void Editor::onSelectNone() {
+    m_currSelection = QRect {0, 0, 0, 0};
+    somethingDrawn();
+}
+
+
 void Editor::onDragStarted(const QPoint pos) {
     assert(m_currCommand == nullptr);
 
