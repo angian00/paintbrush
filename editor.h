@@ -23,11 +23,7 @@ public:
 
     const QPixmap & buffer() { return m_currBuffer; };
 
-    const Command * activeCommand() const;
-    void setCurrentSelection(QRect selection) {
-        m_currSelection = selection;
-        somethingDrawn();
-    }
+    void setCurrentSelection(QRect selection);
 
     void newFile();
     bool loadFile(const QString filename);
@@ -42,6 +38,9 @@ public:
 public slots:
     void onUndo();
     void onRedo();
+    void onCut();
+    void onCopy();
+    void onPaste();
 
     void onSelectAll();
     void onSelectNone();
@@ -84,6 +83,11 @@ signals:
     void modifiedStatusChanged(bool isDocumentModified);
     void commandStackChanged(std::vector<std::unique_ptr<Command>> &stack, int currStackPos);
     void cursorChanged(const QCursor &cursor);
+    void selectionChanged(bool isSomethingSelected);
 };
 
+
+bool isClipboardValid();
+
 #endif // EDITOR_H
+

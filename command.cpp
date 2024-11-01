@@ -56,8 +56,12 @@ void CommandSelect::continueDrag(const QPoint from, const QPoint to) {
     m_editor->setCurrentSelection((QRect {m_from, m_to}).normalized() );
 }
 
-void CommandSelect::perform(QPainter &painter) const {
-    //painter.setPen(QPen(Qt::DashLine));
 
-    //painter.drawRect(QRect {m_from, m_to});
+void CommandCut::perform(QPainter &painter) const {
+    painter.fillRect(m_targetArea, bkgColor);    
 }
+
+void CommandPaste::perform(QPainter &painter) const {
+    painter.drawPixmap(m_targetArea, *m_data);
+}
+

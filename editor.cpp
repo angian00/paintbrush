@@ -8,6 +8,8 @@
 #include <QPainter>
 #include <QPixmap>
 #include <QPen>
+#include <QGuiApplication>
+#include <QClipboard>
 
 #include <iostream>
 #include <memory>
@@ -26,6 +28,19 @@ Editor::Editor(int width, int height):
 
     m_isModified = false;
 }
+
+
+void Editor::setCurrentSelection(QRect selection) {
+    m_currSelection = selection;
+    somethingDrawn();
+    selectionChanged(!m_currSelection.isEmpty());
+}
+
+bool isClipboardValid() {
+    auto clipboardData = QGuiApplication::clipboard()->image();
+    return (!clipboardData.isNull());
+}
+
 
 void Editor::newFile() {
     m_initialBuffer = QPixmap(m_width, m_height);
@@ -88,15 +103,57 @@ void Editor::onRedo() {
     commandStackChanged(m_cmdStack, m_cmdStackPos);
 }
 
+void Editor::onCut() {
+    if (m_currSelection.isEmpty())
+        return;
+
+    assert(m_currCommand == nullptr);
+
+    QPixmap clipboardData = m_currBuffer.copy(m_currSelection);
+    QGuiApplication::clipboard()->setPixmap(clipboardData);
+
+    m_currCommand = std::unique_ptr<Command>(new CommandCut(m_currSelection));
+    performCurrentCommand();
+    pushCurrentCommand();
+    commandStackChanged(m_cmdStack, m_cmdStackPos);
+}
+
+void Editor::onCopy() {
+    std::cout << "onCopy; currSelection is Empty?" << m_currSelection.isEmpty() << std::endl;
+    if (m_currSelection.isEmpty())
+        return;
+
+    //TODO: incapsulate in a Command?
+    //TODO: check on native Linux
+    QPixmap clipboardData = m_currBuffer.copy(m_currSelection);
+    QGuiApplication::clipboard()->setPixmap(clipboardData);
+}
+
+void Editor::onPaste() {
+    assert(m_currCommand == nullptr);
+
+    auto clipboardData = QGuiApplication::clipboard()->image();
+    if (clipboardData.isNull())
+        return;
+
+    auto rawData = QPixmap::fromImage(clipboardData);
+    m_currCommand = std::unique_ptr<Command>(new CommandPaste(m_currSelection, rawData));
+    performCurrentCommand();
+    pushCurrentCommand();
+    commandStackChanged(m_cmdStack, m_cmdStackPos);
+}
+
 
 void Editor::onSelectAll() {
     m_currSelection = QRect {0, 0, m_width, m_height};
     somethingDrawn();
+    selectionChanged(true);
 }
 
 void Editor::onSelectNone() {
     m_currSelection = QRect {0, 0, 0, 0};
     somethingDrawn();
+    selectionChanged(false);
 }
 
 
@@ -147,7 +204,6 @@ void Editor::onToolColorChosen(const QColor & color) {
 
 void Editor::onToolWidthChosen(int width) {
     Command *currCmd = ToolConfig::instance().getConfig(m_activeTool);
-    //FIXME: improve pattern
     switch (m_activeTool) {
         case Draw:
             (static_cast<CommandDraw *>(currCmd))->setWidth(width);

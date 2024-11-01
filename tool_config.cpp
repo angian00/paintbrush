@@ -25,6 +25,9 @@ ToolConfig::ToolConfig() {
             case Erase:
                 cmdConfig = new CommandErase { defaultDrawWidth * 4 };
                 break;
+            
+            default:
+                throw "Not a configurable command";
         }
         
         m_configs.insert(std::make_pair(cmdType, std::unique_ptr<Command>(cmdConfig)));

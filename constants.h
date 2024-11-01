@@ -4,7 +4,7 @@
 #include <QColor>
 
 constexpr QColor defaultDrawColor = { QColorConstants::Black };
-constexpr QColor bkgColor = { QColorConstants::LightGray };
+constexpr QColor bkgColor = { QColorConstants::White };
 constexpr QColor cursorColor = { QColorConstants::Black };
 
 constexpr int defaultDrawWidth = 5;

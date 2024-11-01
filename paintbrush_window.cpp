@@ -17,6 +17,7 @@
 #include <QPushButton>
 #include <QSpinBox>
 #include <QLabel>
+#include <QClipboard>
 
 #include <iostream>
 
@@ -56,7 +57,7 @@ void PaintbrushWindow::initActions() {
 
     auto exitAction = new QAction("Exit", this);
     exitAction->setToolTip("Exit application");
-    exitAction->setShortcut(QKeySequence("Ctrl+X"));
+    exitAction->setShortcut(QKeySequence("Ctrl+Q"));
 
 
     m_undoAction = new QAction("Undo", this);
@@ -66,6 +67,19 @@ void PaintbrushWindow::initActions() {
     m_redoAction = new QAction("Redo", this);
     m_redoAction->setToolTip("Redo previous action");
     m_redoAction->setShortcut(QKeySequence("Ctrl+Y"));
+
+    m_cutAction = new QAction("Cut", this);
+    m_cutAction->setToolTip("Cut");
+    m_cutAction->setShortcut(QKeySequence("Ctrl+X"));
+
+    m_copyAction = new QAction("Copy", this);
+    m_copyAction->setToolTip("Copy");
+    m_copyAction->setShortcut(QKeySequence("Ctrl+C"));
+
+    m_pasteAction = new QAction("Paste", this);
+    m_pasteAction->setToolTip("Paste");
+    m_pasteAction->setShortcut(QKeySequence("Ctrl+V"));
+
 
     auto m_selectAllAction = new QAction("Select All", this);
     m_selectAllAction->setToolTip("Select all");
@@ -119,7 +133,10 @@ void PaintbrushWindow::initActions() {
     menuBar->addMenu(editMenu);
 
     editMenu->addAction(m_undoAction);
-    editMenu->addAction(m_redoAction);    
+    editMenu->addAction(m_redoAction);
+    editMenu->addAction(m_cutAction);
+    editMenu->addAction(m_copyAction);
+    editMenu->addAction(m_pasteAction);
 
     auto selectMenu = new QMenu {"Select", this};
     menuBar->addMenu(selectMenu);
@@ -158,7 +175,6 @@ void PaintbrushWindow::initActions() {
     // toolBar->addSeparator();
 
     //--------------------- connect slots from ui input ---------------------
-
     connect(newAction,  &QAction::triggered, this, &PaintbrushWindow::onFileNew);
     connect(openAction, &QAction::triggered, this, &PaintbrushWindow::onFileOpen);
     connect(saveAction, &QAction::triggered, this, &PaintbrushWindow::onFileSave);
@@ -166,6 +182,9 @@ void PaintbrushWindow::initActions() {
 
     connect(m_undoAction, &QAction::triggered, m_editor, &Editor::onUndo);
     connect(m_redoAction, &QAction::triggered, m_editor, &Editor::onRedo);
+    connect(m_cutAction, &QAction::triggered, m_editor, &Editor::onCut);
+    connect(m_copyAction, &QAction::triggered, m_editor, &Editor::onCopy);
+    connect(m_pasteAction, &QAction::triggered, m_editor, &Editor::onPaste);
     
     connect(m_selectAllAction, &QAction::triggered, m_editor, &Editor::onSelectAll);
     connect(m_selectNoneAction, &QAction::triggered, m_editor, &Editor::onSelectNone);
@@ -178,9 +197,13 @@ void PaintbrushWindow::initActions() {
     connect(m_colorChooser, &QColorDialog::colorSelected, this, &PaintbrushWindow::onColorChosen);
     connect(m_toolWidthAction, &QAction::triggered, this, &PaintbrushWindow::onWidthChosen);
 
+    //--------------------- connect slots from external signals ---------------------
+    connect(QGuiApplication::clipboard(), &QClipboard::changed, this, &PaintbrushWindow::onClipboardChanged);
+
     //--------------------- connect slots from editor ---------------------
     connect(m_editor, &Editor::modifiedStatusChanged, this, &PaintbrushWindow::onModifiedStatusChanged);
     connect(m_editor, &Editor::commandStackChanged, this, &PaintbrushWindow::onCommandStackChanged);
+    connect(m_editor, &Editor::selectionChanged, this, &PaintbrushWindow::onSelectionChanged);
 
     //--------------------- connect signals from this ---------------------
     connect(this, &PaintbrushWindow::chooseTool, m_editor, &Editor::onToolChosen);
@@ -319,6 +342,17 @@ void PaintbrushWindow::onModifiedStatusChanged(bool isDocumentModified) {
 void PaintbrushWindow::onCommandStackChanged(std::vector<std::unique_ptr<Command>> &stack, int currStackPos) {
     m_undoAction->setEnabled( (currStackPos > 0) );
     m_redoAction->setEnabled( (currStackPos < (int)stack.size()) );
+}
+
+
+void PaintbrushWindow::onSelectionChanged(bool isSomethingSelected) {
+    m_copyAction->setEnabled(isSomethingSelected);
+    m_cutAction->setEnabled(isSomethingSelected);
+}
+
+void PaintbrushWindow::onClipboardChanged(QClipboard::Mode targetMode) {
+    if (targetMode == QClipboard::Clipboard)
+        m_pasteAction->setEnabled(isClipboardValid());
 }
 
 

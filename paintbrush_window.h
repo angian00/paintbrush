@@ -12,7 +12,7 @@
 #include <QAction>
 #include <QPushButton>
 #include <QSpinBox>
-
+#include <QClipboard>
 
 class PaintbrushWindow : public QMainWindow
 {
@@ -35,6 +35,9 @@ private:
     QAction *m_toolWidthAction;
     QAction *m_undoAction;
     QAction *m_redoAction;
+    QAction *m_cutAction;
+    QAction *m_copyAction;
+    QAction *m_pasteAction;
 
     QString m_windowTitle;
 
@@ -59,6 +62,8 @@ private slots:
     //-------- from editor --------
     void onModifiedStatusChanged(bool isDocumentModified);
     void onCommandStackChanged(std::vector<std::unique_ptr<Command>> &stack, int currStackPos);
+    void onSelectionChanged(bool isSomethingSelected);
+    void onClipboardChanged(QClipboard::Mode targetMode);
 
 signals:
     void chooseTool(CommandType newCommandType);

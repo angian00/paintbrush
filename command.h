@@ -21,6 +21,9 @@ enum CommandType {
     Select,
     Draw,
     Erase,
+    Cut,
+    Copy,
+    Paste,
 };
 
 
@@ -33,11 +36,12 @@ public:
     virtual std::unique_ptr<Command> clone() const = 0;
 
     virtual CommandType type() const = 0;
-    virtual bool isModifying() const { return false; };
+    virtual bool isModifying() const = 0;
 
     virtual void startDrag(const QPoint pos) {};
     virtual void continueDrag(const QPoint from, const QPoint to) {};
-    virtual void perform(QPainter &painter) const = 0; //TODO: change perform signature to use buffer
+    virtual void perform() const {};
+    virtual void perform(QPainter &painter) const {};
     virtual const Qt::CursorShape getCursor() const { return Qt::ArrowCursor; }
     virtual void paintCustomCursor(QPainter &painter, QPoint pos) const {};
 
@@ -138,20 +142,88 @@ public:
     }
 
     CommandType type() const override { return CommandType::Select; }
+    bool isModifying() const override { return false; };
 
     void startDrag(const QPoint pos) override;
     void continueDrag(const QPoint from, const QPoint to) override;
 
-    void perform(QPainter &painter) const override;
     virtual const Qt::CursorShape getCursor() const override { return Qt::CrossCursor; }
-
-    //void paintCustomCursor(QPainter &painter, QPoint pos) override;
 
 protected:
     QPoint m_from;
     QPoint m_to;
 };
 
+
+
+class CommandCut: public Command {
+
+public:
+    CommandCut(QRect &targetArea): m_targetArea(targetArea) {}
+
+    void setTargetArea(QRect &targetArea) { m_targetArea = targetArea; }
+
+    std::unique_ptr<Command> clone() const override {
+        return std::make_unique<CommandCut>(*this);
+    }
+
+    CommandType type() const override { return CommandType::Cut; }
+    bool isModifying() const override { return true; };
+
+    void perform(QPainter &painter) const override;
+
+protected:
+    QRect m_targetArea;
+};
+
+
+class CommandCopy: public Command {
+
+public:
+    CommandCopy(QPixmap & data) {
+        m_data = std::make_unique<QPixmap>(data);
+    }
+
+    CommandCopy(const CommandCopy& other) {
+        m_data = std::make_unique<QPixmap>(other.m_data->copy());
+    }
+
+    std::unique_ptr<Command> clone() const override {
+        return std::make_unique<CommandCopy>(*this);
+    }
+
+    CommandType type() const override { return CommandType::Copy; }
+    bool isModifying() const override { return false; };
+
+protected:
+    std::unique_ptr<QPixmap> m_data;
+};
+
+
+class CommandPaste: public Command {
+
+public:
+    CommandPaste(QRect &targetArea, QPixmap & data): m_targetArea(targetArea) {
+        m_data = std::make_unique<QPixmap>(data);
+    }
+
+    CommandPaste(const CommandPaste& other) {
+        m_data = std::make_unique<QPixmap>(other.m_data->copy());
+    }
+
+    std::unique_ptr<Command> clone() const override {
+        return std::make_unique<CommandPaste>(*this);
+    }
+
+    CommandType type() const override { return CommandType::Paste; }
+    bool isModifying() const override { return true; };
+
+    void perform(QPainter &painter) const override;
+
+protected:
+    QRect m_targetArea;
+    std::unique_ptr<QPixmap> m_data;
+};
 
 
 #endif // COMMAND_H
