@@ -42,7 +42,8 @@ void Algorithms::floodFill(QPainter &painter, const QColor &fillColor, const QPo
 
         if ( (abs(startColor.red() - currColor.red()) > threshold) ||
             (abs(startColor.green() - currColor.green()) > threshold) ||
-            (abs(startColor.blue() - currColor.blue()) > threshold) ) {
+            (abs(startColor.blue() - currColor.blue()) > threshold) ||
+            (abs(startColor.alpha() - currColor.alpha()) > threshold) ) {
             //not inside
             continue;
         }

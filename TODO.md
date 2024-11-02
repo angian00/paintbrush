@@ -1,14 +1,13 @@
 ## TODO
-- controllare comportamento cursor su linux nativo
-
 + zoom
-+ transparency
-+ brush hardness and shape
 + command transform
+
++ layers
++ brush hardness and shape
+
 + draw only inside selection
 + import images
 
-+ layers
 + filtri di convoluzione
 + visual feedback select: decorazione riquadro, flash on select
 
@@ -23,4 +22,7 @@
 
 
 ### Bugfixing
-- corruption cmd stack quando stack size == 2 (solo linux nativo)
+
+### Controllare su linux nativo
+- bug corruption cmd stack quando stack size == 2 
+- comportamento cursor 
