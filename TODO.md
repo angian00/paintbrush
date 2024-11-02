@@ -23,4 +23,3 @@
 
 ### Bugfixing
 - corruption cmd stack quando stack size == 2 (solo linux nativo)
-- undo does not clear modified status

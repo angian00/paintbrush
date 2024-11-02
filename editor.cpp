@@ -314,7 +314,7 @@ void Editor::restoreCommandsFromStack() {
         m_cmdStack[i]->perform(painter);
     }
 
-    setModified();
+    setModified(m_isModified);
     somethingDrawn();
 }
 
