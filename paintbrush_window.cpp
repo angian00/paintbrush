@@ -36,6 +36,7 @@ PaintbrushWindow::PaintbrushWindow() {
     m_canvas = new PaintbrushCanvas { this, m_editor };
 
     m_colorChooser = new QColorDialog(this);
+
     initActions();
     initToolSettingsPanel();
     initLayout();
@@ -97,6 +98,10 @@ void PaintbrushWindow::initActions() {
     toolDrawAction->setIcon(QIcon("images/design-pencil.svg"));
     toolDrawAction->setShortcut(QKeySequence("D"));
 
+    auto toolFillAction = new QAction("Fill", this);
+    toolFillAction->setIcon(QIcon("images/fill-color.svg"));
+    toolFillAction->setShortcut(QKeySequence("B"));
+
     auto toolEraseAction = new QAction("Erase", this);
     toolEraseAction->setIcon(QIcon("images/erase.svg"));
     toolEraseAction->setShortcut(QKeySequence("E"));
@@ -142,6 +147,7 @@ void PaintbrushWindow::initActions() {
 
     toolBar->addAction(toolSelectAction);
     toolBar->addAction(toolDrawAction);
+    toolBar->addAction(toolFillAction);
     toolBar->addAction(toolEraseAction);
 
     toolBar->addSeparator();
@@ -164,6 +170,7 @@ void PaintbrushWindow::initActions() {
     
     connect(toolSelectAction,       &QAction::triggered, this, [=]() { chooseTool(CommandType::Select); });
     connect(toolDrawAction,         &QAction::triggered, this, [=]() { chooseTool(CommandType::Draw); });
+    connect(toolFillAction,         &QAction::triggered, this, [=]() { chooseTool(CommandType::Fill); });
     connect(toolEraseAction,        &QAction::triggered, this, [=]() { chooseTool(CommandType::Erase); });
 
     connect(m_toolColorChooserAction, &QAction::triggered, this, [=]() { m_colorChooser->show(); });
@@ -185,6 +192,7 @@ void PaintbrushWindow::initActions() {
 
     //--------------------- connect signals/slots between other components ---------------------
     connect(m_editor, &Editor::somethingDrawn, m_canvas, &PaintbrushCanvas::onSomethingDrawn);
+    connect(m_canvas, &PaintbrushCanvas::clicked, m_editor, &Editor::onClicked);
     connect(m_canvas, &PaintbrushCanvas::dragStarted, m_editor, &Editor::onDragStarted);
     connect(m_canvas, &PaintbrushCanvas::dragEnded, m_editor, &Editor::onDragEnded);
     connect(m_canvas, &PaintbrushCanvas::dragContinued, m_editor, &Editor::onDragContinued);
@@ -242,6 +250,7 @@ void PaintbrushWindow::onFileNew() {
     m_windowTitle = "Untitled";
     setWindowTitle(m_windowTitle);
 
+    chooseTool(CommandType::Draw);
     onColorChosen(defaultDrawColor);
     onWidthChosen(defaultDrawWidth);
 }
@@ -305,9 +314,6 @@ void PaintbrushWindow::onFileExit() {
 void PaintbrushWindow::onColorChosen(const QColor & color) {
     updateColorThumbnail(color);
     m_editor->onToolColorChosen(color);
-
-    //when you choose a color, draw tool is also selected
-    chooseTool(CommandType::Draw);
 }
 
 void PaintbrushWindow::onWidthChosen(int width) {

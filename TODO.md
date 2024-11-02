@@ -1,5 +1,5 @@
 ## TODO
-- bucket/flood fill
+- controllare comportamento cursor su linux nativo
 
 + zoom
 + transparency
@@ -15,6 +15,7 @@
 
 
 ### Refactoring
+- spezzare metodi init paintbrush_window
 - spostare Command* in file separati
 ? differenziare comandi istantanei da quelli che usano il mouse
 - gestire meglio scelta tool settings

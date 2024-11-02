@@ -18,6 +18,7 @@ sources = [
   'main.cpp',
   'editor.cpp',
   'command.cpp',
+  'algorithms.cpp',
   'tool_config.cpp',
   'paintbrush_window.cpp',
   'paintbrush_canvas.cpp',

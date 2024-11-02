@@ -2,7 +2,7 @@
 
 #include "constants.h"
 #include "editor.h"
-
+#include "algorithms.h"
 
 #include <QPen>
 
@@ -25,6 +25,14 @@ void CommandDraw::paintCustomCursor(QPainter &painter, QPoint pos) const {
     painter.setBrush(cursorColor);
     painter.drawEllipse(pos.x() - radius, pos.y() - radius, radius * 2, radius * 2);
 }
+
+
+void CommandFill::perform(QPainter &painter) const {
+    Algorithms::floodFill(painter, m_color, m_targetPos); 
+    // auto tmpPos = QPoint {100, 100};
+    // Algorithms::floodFill(painter, m_color, tmpPos);
+}
+
 
 
 void CommandErase::continueDrag(const QPoint from, const QPoint to) {

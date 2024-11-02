@@ -119,7 +119,6 @@ void Editor::onCut() {
 }
 
 void Editor::onCopy() {
-    std::cout << "onCopy; currSelection is Empty?" << m_currSelection.isEmpty() << std::endl;
     if (m_currSelection.isEmpty())
         return;
 
@@ -157,27 +156,15 @@ void Editor::onSelectNone() {
 }
 
 
-void Editor::onDragStarted(const QPoint pos) {
-    assert(m_currCommand == nullptr);
+void Editor::onClicked(const QPoint pos) {
+    Command * maybeCmd = ToolConfig::instance().getConfig(m_activeTool);
+    if (!maybeCmd->isClickable()) {
+        //FIXME: use a ToolSetting class instead
+        return;
+    }
 
     m_currCommand = ToolConfig::instance().createCommand(m_activeTool);
-    m_currCommand->setEditor(this);
-    m_currCommand->startDrag(pos);
-}
-
-void Editor::onDragContinued(const QPoint start, const QPoint end) {
-    assert(m_currCommand != nullptr);
-
-    m_currCommand->continueDrag(start, end);
-    // //DEBUG
-    // if (m_currCommand->type() == CommandType::Select) {
-    //     auto cmdSelect = static_cast<CommandSelect *>(m_currCommand.get());
-    //     m_currSelection = cmdSelect->selectionArea();
-    // }
-    // //
-}
-
-void Editor::onDragEnded(const QPoint pos) {
+    m_currCommand->setTargetPos(pos);
     performCurrentCommand();
     if (m_currCommand->isModifying()) {
         pushCurrentCommand();
@@ -187,9 +174,41 @@ void Editor::onDragEnded(const QPoint pos) {
     }
 
     assert(m_currCommand == nullptr);
-
 }
 
+void Editor::onDragStarted(const QPoint pos) {
+    Command * maybeCmd = ToolConfig::instance().getConfig(m_activeTool);
+    if (!maybeCmd->isDraggable()) {
+        //FIXME: use a ToolSetting class instead
+        return;
+    }
+
+    m_currCommand = ToolConfig::instance().createCommand(m_activeTool);
+    m_currCommand->setEditor(this);
+    m_currCommand->startDrag(pos);
+}
+
+void Editor::onDragContinued(const QPoint start, const QPoint end) {
+    if ((m_currCommand == nullptr) || (!m_currCommand->isDraggable()))
+        return;
+
+    m_currCommand->continueDrag(start, end);
+}
+
+void Editor::onDragEnded(const QPoint pos) {
+    if ((m_currCommand == nullptr) || (!m_currCommand->isDraggable()))
+        return;
+
+    performCurrentCommand();
+    if (m_currCommand->isModifying()) {
+        pushCurrentCommand();
+        commandStackChanged(m_cmdStack, m_cmdStackPos);
+    } else {
+        m_currCommand.reset();
+    }
+
+    assert(m_currCommand == nullptr);
+}
 
 void Editor::onToolChosen(CommandType newToolType) {
     m_activeTool = newToolType;
@@ -200,6 +219,9 @@ void Editor::onToolChosen(CommandType newToolType) {
 void Editor::onToolColorChosen(const QColor & color) {
     Command * cmdDraw = ToolConfig::instance().getConfig(CommandType::Draw);
     (static_cast<CommandDraw *>(cmdDraw))->setColor(color);
+
+    Command * cmdFill = ToolConfig::instance().getConfig(CommandType::Fill);
+    (static_cast<CommandFill *>(cmdFill))->setColor(color);
 }
 
 void Editor::onToolWidthChosen(int width) {
@@ -255,13 +277,15 @@ void Editor::paintCurrentBuffer(QPaintDevice * target) {
     painter.drawPixmap(0, 0, m_currBuffer);
 }
 
-void Editor::paintToolCursor(QPoint &pos, QPaintDevice * target) {
+void Editor::paintCustomCursor(QPoint &pos, QPaintDevice * target) {
+    auto currToolConfig = ToolConfig::instance().getConfig(m_activeTool);
+    if (!currToolConfig->usesCustomCursor())
+        return;
+
     if (target == nullptr)
         target = &m_currBuffer;
 
     QPainter painter {target};
-
-    auto currToolConfig = ToolConfig::instance().getConfig(m_activeTool);
     currToolConfig->paintCustomCursor(painter, pos);
 }
 

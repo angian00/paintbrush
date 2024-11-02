@@ -23,6 +23,8 @@ public:
 
     const QPixmap & buffer() { return m_currBuffer; };
 
+
+    const QRect currentSelection() const { return m_currSelection; }
     void setCurrentSelection(QRect selection);
 
     void newFile();
@@ -32,7 +34,7 @@ public:
 
     void paintCurrentBuffer(QPaintDevice * target=nullptr);
     void performCurrentCommand(QPaintDevice * target=nullptr);
-    void paintToolCursor(QPoint &pos, QPaintDevice * target=nullptr);
+    void paintCustomCursor(QPoint &pos, QPaintDevice * target=nullptr);
     void paintCurrentSelection(QPaintDevice * target=nullptr);
 
 public slots:
@@ -49,6 +51,7 @@ public slots:
     void onToolColorChosen(const QColor & color);
     void onToolWidthChosen(int width);
 
+    void onClicked(const QPoint pos);
     void onDragStarted(const QPoint pos);
     void onDragEnded(const QPoint pos);
     void onDragContinued(const QPoint start, const QPoint end);

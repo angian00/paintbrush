@@ -36,6 +36,7 @@ protected:
     //void paintToolCursor(QPainter &painter, const Command *currCommand);
 
 signals:
+    void clicked(QPoint pos);
     void dragStarted(QPoint pos);
     void dragEnded(QPoint pos);
     void dragContinued(const QPoint start, const QPoint end);

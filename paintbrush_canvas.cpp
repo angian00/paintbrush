@@ -24,7 +24,7 @@ void PaintbrushCanvas::paintEvent(QPaintEvent * _) {
     m_editor->paintCurrentBuffer(this);
     m_editor->performCurrentCommand(this);
 
-    m_editor->paintToolCursor(m_currMousePos, this);
+    m_editor->paintCustomCursor(m_currMousePos, this);
     m_editor->paintCurrentSelection(this);
 }
 
@@ -53,6 +53,8 @@ void PaintbrushCanvas::mousePressEvent(QMouseEvent *event) {
 }
 
 void PaintbrushCanvas::mouseReleaseEvent(QMouseEvent *event) {
+    clicked(event->pos());
+    
     if ((m_isDragging) && !(event->buttons() & Qt::LeftButton)) {
         m_isDragging = false;
         dragEnded(event->pos());

@@ -3,6 +3,7 @@
 
 
 #include "qnamespace.h"
+#include "qpainter.h"
 #include <QPixmap>
 #include <QColor>
 #include <QPoint>
@@ -20,6 +21,7 @@ class Editor;
 enum CommandType {
     Select,
     Draw,
+    Fill,
     Erase,
     Cut,
     Copy,
@@ -38,22 +40,27 @@ public:
     virtual CommandType type() const = 0;
     virtual bool isModifying() const = 0;
 
+    virtual bool isClickable() const { return false; };
+    virtual void setTargetPos(const QPoint pos) {};
+    
+    virtual bool isDraggable() const { return false; };
     virtual void startDrag(const QPoint pos) {};
     virtual void continueDrag(const QPoint from, const QPoint to) {};
+    
     virtual void perform() const {};
     virtual void perform(QPainter &painter) const {};
     virtual const Qt::CursorShape getCursor() const { return Qt::ArrowCursor; }
+    virtual bool usesCustomCursor() const { return false; };
     virtual void paintCustomCursor(QPainter &painter, QPoint pos) const {};
 
 protected:
     Editor *m_editor;
 };
 
-
 class CommandDraw: public Command {
 
 public:
-    CommandDraw(QColor color, int width): m_width(width), m_color(color) {
+    CommandDraw(const QColor &color, int width): m_width(width), m_color(color) {
         m_lines = std::make_unique<std::vector<QPair<QPoint, QPoint>>>();
     }
 
@@ -82,15 +89,46 @@ public:
 
     QColor color() const { return m_color; }
 
+    bool isDraggable() const override { return true; };
     void continueDrag(const QPoint from, const QPoint to) override;
     void perform(QPainter &painter) const override;
     virtual const Qt::CursorShape getCursor() const override { return Qt::BlankCursor; }
+    bool usesCustomCursor() const override { return true; };
     void paintCustomCursor(QPainter &painter, QPoint pos) const override;
 
 protected:
     int m_width;
     QColor m_color;
     std::unique_ptr<std::vector<QPair<QPoint, QPoint>>> m_lines;
+};
+
+
+class CommandFill: public Command {
+
+public:
+    CommandFill(const QColor &color, const QPoint &targetPos): m_color(color), m_targetPos(targetPos) {}
+
+    void setColor(const QColor &color) {
+        m_color = color;
+    }
+
+    std::unique_ptr<Command> clone() const override {
+        return std::make_unique<CommandFill>(*this);
+    }
+
+    CommandType type() const override { return CommandType::Fill; }
+    bool isModifying() const override { return true; };
+    bool isClickable() const override { return true; };
+    void setTargetPos(const QPoint pos) override { m_targetPos = pos; };
+
+    QColor color() const { return m_color; }
+
+    void perform(QPainter &painter) const override;
+    const Qt::CursorShape getCursor() const override { return Qt::ArrowCursor; }
+
+protected:
+    QColor m_color;
+    QPoint m_targetPos;
 };
 
 
@@ -120,10 +158,12 @@ public:
     CommandType type() const override { return CommandType::Erase; }
     virtual bool isModifying() const override { return true; };
 
+    bool isDraggable() const override { return true; };
     void continueDrag(const QPoint from, const QPoint to) override;
     void perform(QPainter &painter) const override;
     
     virtual const Qt::CursorShape getCursor() const override { return Qt::BlankCursor; }
+    bool usesCustomCursor() const override { return true; };
     void paintCustomCursor(QPainter &painter, QPoint pos) const override;
 
 protected:
