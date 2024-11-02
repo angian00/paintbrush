@@ -48,69 +48,57 @@ void PaintbrushWindow::initActions() {
     newAction->setShortcut(QKeySequence("Ctrl+N"));
 
     auto openAction = new QAction("Open", this);
-    openAction->setToolTip("Open file");
     openAction->setShortcut(QKeySequence("Ctrl+O"));
 
-    auto saveAction = new QAction("Save", this);
-    saveAction->setToolTip("Save file");
-    saveAction->setShortcut(QKeySequence("Ctrl+S"));
+    m_saveAction = new QAction("Save", this);
+    m_saveAction->setShortcut(QKeySequence("Ctrl+S"));
+
+    m_saveAsAction = new QAction("Save as...", this);
+    m_saveAsAction->setShortcut(QKeySequence("Ctrl+Shift+S"));
 
     auto exitAction = new QAction("Exit", this);
-    exitAction->setToolTip("Exit application");
     exitAction->setShortcut(QKeySequence("Ctrl+Q"));
 
 
     m_undoAction = new QAction("Undo", this);
-    m_undoAction->setToolTip("Undo previous action");
     m_undoAction->setShortcut(QKeySequence("Ctrl+Z"));
 
     m_redoAction = new QAction("Redo", this);
-    m_redoAction->setToolTip("Redo previous action");
     m_redoAction->setShortcut(QKeySequence("Ctrl+Y"));
 
     m_cutAction = new QAction("Cut", this);
-    m_cutAction->setToolTip("Cut");
     m_cutAction->setShortcut(QKeySequence("Ctrl+X"));
 
     m_copyAction = new QAction("Copy", this);
-    m_copyAction->setToolTip("Copy");
     m_copyAction->setShortcut(QKeySequence("Ctrl+C"));
 
     m_pasteAction = new QAction("Paste", this);
-    m_pasteAction->setToolTip("Paste");
     m_pasteAction->setShortcut(QKeySequence("Ctrl+V"));
 
 
     auto m_selectAllAction = new QAction("Select All", this);
-    m_selectAllAction->setToolTip("Select all");
     m_selectAllAction->setShortcut(QKeySequence("Ctrl+A"));
 
     auto m_selectNoneAction = new QAction("Select None", this);
-    m_selectNoneAction->setToolTip("Select none");
     m_selectNoneAction->setShortcut(QKeySequence("Shift+Ctrl+A"));
 
 
     m_toolColorChooserAction = new QAction("Choose Color", this);
-    //m_toolColorChooserAction->setIcon(QIcon(m_colorThumbnail));
     m_toolColorChooserAction->setToolTip("Choose color");
 
     m_toolWidthAction = new QAction("Choose Width", this);
-    //m_toolWidthAction->setIcon(QIcon(m_widthThumbnail));
     m_toolWidthAction->setToolTip("Choose width");
 
     auto toolSelectAction = new QAction("Select", this);
     toolSelectAction->setIcon(QIcon("images/square3d-corner-to-corner.svg"));
-    toolSelectAction->setToolTip("Select tool");
     toolSelectAction->setShortcut(QKeySequence("S"));
 
     auto toolDrawAction = new QAction("Draw", this);
     toolDrawAction->setIcon(QIcon("images/design-pencil.svg"));
-    toolDrawAction->setToolTip("Draw tool");
     toolDrawAction->setShortcut(QKeySequence("D"));
 
     auto toolEraseAction = new QAction("Erase", this);
     toolEraseAction->setIcon(QIcon("images/erase.svg"));
-    toolEraseAction->setToolTip("Erase tool");
     toolEraseAction->setShortcut(QKeySequence("E"));
 
 
@@ -124,7 +112,8 @@ void PaintbrushWindow::initActions() {
 
     fileMenu->addAction(newAction);
     fileMenu->addAction(openAction);
-    fileMenu->addAction(saveAction);    
+    fileMenu->addAction(m_saveAction);
+    fileMenu->addAction(m_saveAsAction);
     fileMenu->addSeparator();
     fileMenu->addAction(exitAction);
 
@@ -151,33 +140,17 @@ void PaintbrushWindow::initActions() {
     toolBar->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
     addToolBar(Qt::LeftToolBarArea, toolBar);
 
-    // toolBar->addAction(m_toolColorChooserAction);
-    // toolBar->addAction(m_toolWidthAction);
-
-    // toolBar->addSeparator();
-
     toolBar->addAction(toolSelectAction);
     toolBar->addAction(toolDrawAction);
     toolBar->addAction(toolEraseAction);
 
     toolBar->addSeparator();
 
-    //---------------------- tool settings ---------------------------
-
-
-    // auto toolSettingsBar = new QToolBar(this);
-    // toolSettingsBar->setIconSize(QSize(toolThumbnailSize, toolThumbnailSize));
-    // toolSettingsBar->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
-    // addToolBar(Qt::TopToolBarArea, toolSettingsBar);
-
-    // toolSettingsBar->addAction(m_toolColorChooserAction);
-    // toolSettingsBar->addAction(m_toolWidthAction);
-    // toolBar->addSeparator();
-
     //--------------------- connect slots from ui input ---------------------
     connect(newAction,  &QAction::triggered, this, &PaintbrushWindow::onFileNew);
     connect(openAction, &QAction::triggered, this, &PaintbrushWindow::onFileOpen);
-    connect(saveAction, &QAction::triggered, this, &PaintbrushWindow::onFileSave);
+    connect(m_saveAction, &QAction::triggered, this, &PaintbrushWindow::onFileSave);
+    connect(m_saveAsAction, &QAction::triggered, this, &PaintbrushWindow::onFileSaveAs);
     connect(exitAction, &QAction::triggered, this, &PaintbrushWindow::onFileExit);
 
     connect(m_undoAction, &QAction::triggered, m_editor, &Editor::onUndo);
@@ -286,6 +259,7 @@ void PaintbrushWindow::openFile(QString filepath) {
         return;
     }
 
+    m_filepath = filepath;
     m_windowTitle = QFileInfo(filepath).fileName();
     setWindowTitle(m_windowTitle);
 
@@ -294,7 +268,19 @@ void PaintbrushWindow::openFile(QString filepath) {
 }
 
 void PaintbrushWindow::onFileSave() {
+    if (m_filepath.isEmpty())
+        onFileSaveAs();
+    else
+        saveFile(m_filepath);
+}
+
+void PaintbrushWindow::onFileSaveAs() {
     QString filepath = QFileDialog::getSaveFileName(this, "Save file");
+    saveFile(filepath);
+
+}
+
+void PaintbrushWindow::saveFile(QString filepath) {
     if (filepath.isEmpty())
         return;
 
@@ -303,11 +289,13 @@ void PaintbrushWindow::onFileSave() {
         return;
     }
 
+    m_filepath = filepath;
     m_windowTitle = QFileInfo(filepath).fileName();
     setWindowTitle(m_windowTitle);
 
     m_canvas->update();
 }
+
 
 void PaintbrushWindow::onFileExit() {
     close();
@@ -335,7 +323,10 @@ void PaintbrushWindow::onModifiedStatusChanged(bool isDocumentModified) {
     auto fullWindowTitle = m_windowTitle;
     if (isDocumentModified)
         fullWindowTitle += "*";
-
+    
+    m_saveAction->setEnabled(isDocumentModified);
+    m_saveAsAction->setEnabled(isDocumentModified);
+    
     setWindowTitle(fullWindowTitle);
 }
 

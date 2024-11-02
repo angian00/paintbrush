@@ -31,6 +31,8 @@ private:
     QSpinBox *m_chooseWidthControl;
     QLabel *m_widthThumbnail;
 
+    QAction *m_saveAction;
+    QAction *m_saveAsAction;
     QAction *m_toolColorChooserAction;
     QAction *m_toolWidthAction;
     QAction *m_undoAction;
@@ -40,12 +42,16 @@ private:
     QAction *m_pasteAction;
 
     QString m_windowTitle;
+    QString m_filepath;
+
 
     void initActions();
     void initToolSettingsPanel();
     void initLayout();
     
     void openFile(QString filepath);
+    void saveFile(QString filepath);
+
     void updateColorThumbnail(const QColor & color);
     void updateWidthThumbnail(int width);
 
@@ -54,6 +60,7 @@ private slots:
     void onFileNew();
     void onFileOpen();
     void onFileSave();
+    void onFileSaveAs();
     void onFileExit();
 
     void onColorChosen(const QColor & color);

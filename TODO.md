@@ -1,6 +1,4 @@
 ## TODO
-- "save as" vs "save"
-
 - bucket/flood fill
 
 + zoom
@@ -25,3 +23,4 @@
 
 ### Bugfixing
 - corruption cmd stack quando stack size == 2 (solo linux nativo)
+- undo does not clear modified status
