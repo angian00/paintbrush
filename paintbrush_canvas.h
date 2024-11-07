@@ -2,6 +2,7 @@
 #define PAINTBRUSH_CANVAS_H
 
 #include "editor.h"
+#include "qnamespace.h"
 
 #include <QPixmap>
 #include <QWidget>
@@ -18,14 +19,20 @@ public:
     explicit PaintbrushCanvas(QWidget *parent, Editor *editor);
     
 public slots:
+    void onDocumentSizeChanged(QSize size);
+    void onZoomLevelChanged(int zoomLevel);
     void onSomethingDrawn() { update(); }
 
 protected:
     Editor *m_editor;
 
+    QSize m_documentSize;
+
+
     bool m_isDragging { false };
     QPoint m_dragStart;
     QPoint m_currMousePos;
+    double m_scaleFactor;
 
 
     void paintEvent(QPaintEvent *event) override;
@@ -33,10 +40,12 @@ protected:
     void mousePressEvent(QMouseEvent *event) override;
     void mouseReleaseEvent(QMouseEvent *event) override;
 
-    //void paintToolCursor(QPainter &painter, const Command *currCommand);
+private:
+    void updateCanvasSize();
+    QPoint scalePoint(const QPoint & p) const;
 
 signals:
-    void clicked(QPoint pos);
+    void clicked(QPoint pos, Qt::MouseButton button);
     void dragStarted(QPoint pos);
     void dragEnded(QPoint pos);
     void dragContinued(const QPoint start, const QPoint end);

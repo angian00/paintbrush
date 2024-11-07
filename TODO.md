@@ -1,5 +1,16 @@
 ## TODO
-+ zoom
+
+- zoom
+    - scroll on mouse wheel / Shift mouse wheel
+    - zoom on Ctrl+mouse wheel
+    - zoomOut con click destro
+
+- aggiungere status bar con pos cursore e zoom level
+
+
+- moveView on space
+- scroll hor on mouse wheel, scroll ver on Shift + mouse wheel
+
 + command transform
 
 + layers
@@ -23,6 +34,8 @@
 
 ### Bugfixing
 
+### Performance
+- lento quando la scala e' elevata (==quando la canvas e' grande)
+
 ### Controllare su linux nativo
-- bug corruption cmd stack quando stack size == 2 
 - comportamento cursor 

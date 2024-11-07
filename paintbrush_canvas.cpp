@@ -2,6 +2,7 @@
 #include "command.h"
 #include "editor.h"
 #include "constants.h"
+#include "qtransform.h"
 
 #include <QApplication>
 #include <QPainter>
@@ -10,21 +11,56 @@
 #include <QMessageBox>
 #include <QFileDialog>
 #include <QColor>
+#include <QSize>
 
+#include <math.h>
 
 void paintBackgroundPattern(QWidget * target);
 
+PaintbrushCanvas::PaintbrushCanvas(QWidget *parent, Editor *editor) : 
+    QWidget(parent), m_editor(editor), m_documentSize(QSize()), m_scaleFactor(1.0) {
 
-PaintbrushCanvas::PaintbrushCanvas(QWidget *parent, Editor *editor) : QWidget(parent), m_editor(editor) {
-    setFixedSize(parent->width(), parent->height());
+    setFixedSize(m_documentSize);
     setMouseTracking(true);
 }
 
+void PaintbrushCanvas::onDocumentSizeChanged(QSize size) {
+    m_documentSize = size;
+    updateCanvasSize();
+
+}
+
+void PaintbrushCanvas::onZoomLevelChanged(int zoomLevel) {
+    std::cout << "onZoomLevelChanged: " << zoomLevel << std::endl;
+    m_scaleFactor = zoomLevel / 100.0;
+    updateCanvasSize();
+}
+
+void PaintbrushCanvas::updateCanvasSize() {
+    auto canvasSize = m_documentSize * m_scaleFactor;
+    std::cout << "setting PaintbrushCanvas size to: " << canvasSize.width() << ", " << canvasSize.height() << std::endl;
+    setFixedSize(canvasSize);
+
+    update();
+}
 
 void PaintbrushCanvas::paintEvent(QPaintEvent * _) {
     paintBackgroundPattern(this);
-    m_editor->paintCurrentBuffer(this);
-    m_editor->performCurrentCommand(this);
+
+    QPainter painter { this };
+    painter.setRenderHints(QPainter::Antialiasing);
+
+    QTransform transform = QTransform::fromScale(m_scaleFactor, m_scaleFactor);
+    painter.setTransform(transform);
+
+    m_editor->paintCurrentBuffer(&painter);
+    m_editor->performPartialCommand(&painter);
+
+    // m_editor->paintCurrentBuffer(this);
+    // m_editor->performCurrentCommand(this);
+
+    transform.reset();
+    painter.setTransform(transform);
 
     m_editor->paintCustomCursor(m_currMousePos, this);
     m_editor->paintCurrentSelection(this);
@@ -38,29 +74,37 @@ void PaintbrushCanvas::mouseMoveEvent(QMouseEvent *event) {
     if (!m_isDragging)
         return;
 
-    QPoint dragEnd { event->x(), event->y() };
+    QPoint dragEnd = scalePoint(m_currMousePos);
 
-    dragContinued(m_dragStart, dragEnd);
+    emit dragContinued(m_dragStart, dragEnd);
 
     m_dragStart = dragEnd;
 }
 
 
 void PaintbrushCanvas::mousePressEvent(QMouseEvent *event) {
-    if ((!m_isDragging) && (event->buttons() & Qt::LeftButton)) {
+    if ((!m_isDragging) && (event->button() & Qt::LeftButton)) {
         m_isDragging = true;
-        m_dragStart = { event->x(), event->y() };
-        dragStarted(event->pos());
+        m_dragStart = scalePoint(event->pos());
+        emit dragStarted(event->pos());
     }
 }
 
 void PaintbrushCanvas::mouseReleaseEvent(QMouseEvent *event) {
-    clicked(event->pos());
-    
-    if ((m_isDragging) && !(event->buttons() & Qt::LeftButton)) {
+    emit clicked(scalePoint(event->pos()), event->button());
+
+    if ((m_isDragging) && (event->button() & Qt::LeftButton)) {
         m_isDragging = false;
-        dragEnded(event->pos());
+        emit dragEnded(scalePoint(event->pos()));
     }
+}
+
+
+QPoint PaintbrushCanvas::scalePoint(const QPoint &p) const {
+    return QPoint {
+        static_cast<int>(floor(p.x()/m_scaleFactor)), 
+        static_cast<int>(floor(p.y()/m_scaleFactor))
+    };
 }
 
 
@@ -84,3 +128,4 @@ void paintBackgroundPattern(QWidget * target) {
         }
     }
 }
+

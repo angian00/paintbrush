@@ -11,7 +11,7 @@
 ToolConfig::ToolConfig() {
     //FUTURE: load from persistent source (document file, or user profile dir)
     
-    for (auto cmdType: { CommandType::Select, CommandType::Draw, CommandType::Fill, CommandType::Erase }) {
+    for (auto cmdType: { CommandType::Select, CommandType::Draw, CommandType::Fill, CommandType::Erase, CommandType::Zoom  }) {
         
         Command *cmdConfig;
         
@@ -19,6 +19,7 @@ ToolConfig::ToolConfig() {
             case Select:
                 cmdConfig = new CommandSelect {};
                 break;
+
             case Draw: 
                 cmdConfig = new CommandDraw {Qt::black, defaultDrawWidth };
                 break;
@@ -27,6 +28,10 @@ ToolConfig::ToolConfig() {
                 break;
             case Erase:
                 cmdConfig = new CommandErase { defaultDrawWidth * 4 };
+                break;
+
+            case Zoom:
+                cmdConfig = new CommandZoom {  };
                 break;
             
             default:

@@ -31,11 +31,17 @@ public:
     bool loadFile(const QString filename);
     bool saveFile(const QString filename);
 
+    void zoomIn();
+    void zoomOut();
 
-    void paintCurrentBuffer(QPaintDevice * target=nullptr);
-    void performCurrentCommand(QPaintDevice * target=nullptr);
-    void paintCustomCursor(QPoint &pos, QPaintDevice * target=nullptr);
-    void paintCurrentSelection(QPaintDevice * target=nullptr);
+    // void paintCurrentBuffer(QPaintDevice * target=nullptr);
+    // void performCurrentCommand(QPaintDevice * target=nullptr);
+    // void paintCustomCursor(QPoint &pos, QPaintDevice * target=nullptr);
+    // void paintCurrentSelection(QPaintDevice * target=nullptr);
+    void paintCurrentBuffer(QPainter * canvasPainter);
+    void performPartialCommand(QPainter * canvasPainter);
+    void paintCustomCursor(QPoint &pos, QWidget * canvas);
+    void paintCurrentSelection(QWidget * canvas);
 
 public slots:
     void onUndo();
@@ -51,7 +57,7 @@ public slots:
     void onToolColorChosen(const QColor & color);
     void onToolWidthChosen(int width);
 
-    void onClicked(const QPoint pos);
+    void onClicked(const QPoint pos, Qt::MouseButton button);
     void onDragStarted(const QPoint pos);
     void onDragEnded(const QPoint pos);
     void onDragContinued(const QPoint start, const QPoint end);
@@ -65,6 +71,7 @@ protected:
     QPixmap m_currBuffer;
 
     bool m_isModified;
+    int m_zoomLevel;
 
     CommandType m_activeTool;
     QRect m_currSelection;
@@ -76,11 +83,16 @@ protected:
 
     void setModified(bool edited=true);
 
+    void resetDocument();
     void reset(QPixmap &destBuffer, const QPixmap &srcBuffer);
-    void pushCurrentCommand();
     void restoreCommandsFromStack();
+    void pushCurrentCommand();
+    void performCompleteCommand();
+    void performCurrentCommand(QPainter * painter);
 
 signals:
+    void documentSizeChanged(QSize size);
+    void zoomLevelChanged(int zoomLevel);
     void somethingDrawn();
     
     void modifiedStatusChanged(bool isDocumentModified);

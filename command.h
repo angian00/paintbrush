@@ -26,12 +26,18 @@ enum CommandType {
     Cut,
     Copy,
     Paste,
+    Zoom,
 };
 
+enum CommandMode {
+    Primary,
+    Alternate,
+};
 
 class Command {
 
 public:
+    void setMode(CommandMode mode) { m_mode = mode; };
     void setEditor(Editor *editor) { m_editor = editor; }
 
     virtual ~Command() = default;
@@ -42,7 +48,7 @@ public:
 
     virtual bool isClickable() const { return false; };
     virtual void setTargetPos(const QPoint pos) {};
-    
+
     virtual bool isDraggable() const { return false; };
     virtual void startDrag(const QPoint pos) {};
     virtual void continueDrag(const QPoint from, const QPoint to) {};
@@ -54,6 +60,7 @@ public:
     virtual void paintCustomCursor(QPainter &painter, QPoint pos) const {};
 
 protected:
+    CommandMode m_mode;
     Editor *m_editor;
 };
 
@@ -184,10 +191,11 @@ public:
     CommandType type() const override { return CommandType::Select; }
     bool isModifying() const override { return false; };
 
+    bool isDraggable() const override { return true; };
     void startDrag(const QPoint pos) override;
     void continueDrag(const QPoint from, const QPoint to) override;
 
-    virtual const Qt::CursorShape getCursor() const override { return Qt::CrossCursor; }
+    const Qt::CursorShape getCursor() const override { return Qt::CrossCursor; }
 
 protected:
     QPoint m_from;
@@ -263,6 +271,29 @@ public:
 protected:
     QRect m_targetArea;
     std::unique_ptr<QPixmap> m_data;
+};
+
+
+class CommandZoom: public Command {
+
+public:
+    CommandZoom() {}
+
+    std::unique_ptr<Command> clone() const override {
+        return std::make_unique<CommandZoom>(*this);
+    }
+
+    CommandType type() const override { return CommandType::Zoom; }
+    bool isModifying() const override { return false; };
+    bool isClickable() const override { return true; };
+
+    void setTargetPos(const QPoint pos) override { m_targetPos = pos; };
+
+    const Qt::CursorShape getCursor() const override { return Qt::CrossCursor; }
+    void perform() const override;
+
+protected:
+    QPoint m_targetPos;
 };
 
 

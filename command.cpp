@@ -73,3 +73,15 @@ void CommandPaste::perform(QPainter &painter) const {
     painter.drawPixmap(m_targetArea, *m_data);
 }
 
+
+void CommandZoom::perform() const {
+    //TODO: center movement around m_targetPos
+    std::cout << "CommandZoom::perform" << std::endl;
+    std::cout << "mode: " << m_mode << std::endl;
+    std::cout << "editor: " << m_editor << std::endl;
+
+    if (m_mode == Primary)
+        m_editor->zoomIn();
+    else
+        m_editor->zoomOut();
+}

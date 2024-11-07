@@ -17,4 +17,7 @@ constexpr int bkgPatternSize = 8; //in px
 constexpr QColor bkgPatternColor1 = QColorConstants::LightGray;
 constexpr QColor bkgPatternColor2 = QColorConstants::DarkGray;
 
+constexpr int maxZoomLevel = 1000; //in percent
+constexpr int minZoomLevel = 1;    //in percent
+
 #endif // CONSTANTS_H

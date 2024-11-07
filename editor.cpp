@@ -18,7 +18,7 @@
 
 
 Editor::Editor(int width, int height): 
-    m_width(width), m_height(height) {
+    m_width(width), m_height(height), m_zoomLevel(100) {
     
     m_initialBuffer = QPixmap(m_width, m_height);
     m_initialBuffer.fill(bkgColor);
@@ -32,8 +32,8 @@ Editor::Editor(int width, int height):
 
 void Editor::setCurrentSelection(QRect selection) {
     m_currSelection = selection;
-    somethingDrawn();
-    selectionChanged(!m_currSelection.isEmpty());
+    emit somethingDrawn();
+    emit selectionChanged(!m_currSelection.isEmpty());
 }
 
 bool isClipboardValid() {
@@ -46,8 +46,7 @@ void Editor::newFile() {
     m_initialBuffer = QPixmap(m_width, m_height);
     m_initialBuffer.fill(bkgColor);
 
-    reset(m_currBuffer, m_initialBuffer);
-    setModified(false);
+    resetDocument();
 }
 
 bool Editor::loadFile(const QString filename) {
@@ -55,9 +54,9 @@ bool Editor::loadFile(const QString filename) {
     if (!isLoadOk)
         return false;
 
-    reset(m_currBuffer, m_initialBuffer);
-    setModified(false);
-    somethingDrawn();
+    resetDocument();
+
+    emit somethingDrawn();
 
     return true;
 }
@@ -69,9 +68,23 @@ bool Editor::saveFile(const QString filename) {
 
     reset(m_initialBuffer, m_currBuffer);
     setModified(false);
-    somethingDrawn();
+    emit somethingDrawn();
 
     return true;
+}
+
+void Editor::zoomIn() {
+    std::cout << "Editor::zoomIn" << std::endl;
+
+    m_zoomLevel = std::min(maxZoomLevel, m_zoomLevel * 2);
+    emit zoomLevelChanged(m_zoomLevel);
+    std::cout << "after Editor::zoomIn" << std::endl;
+}
+
+void Editor::zoomOut() {
+    m_zoomLevel = std::max(minZoomLevel, m_zoomLevel / 2);
+    emit zoomLevelChanged(m_zoomLevel);
+    std::cout << "after Editor::zoomOut" << std::endl;
 }
 
 
@@ -86,7 +99,7 @@ void Editor::onUndo() {
 
     restoreCommandsFromStack();
     //std::cout << "after undo; m_commandStack.size()=" << m_commandStack.size() << "; m_cmdStackPos=" << m_cmdStackPos << std::endl;
-    commandStackChanged(m_cmdStack, m_cmdStackPos);
+    emit commandStackChanged(m_cmdStack, m_cmdStackPos);
 }
 
 void Editor::onRedo() {
@@ -100,7 +113,7 @@ void Editor::onRedo() {
 
     restoreCommandsFromStack();
     //std::cout << "after redo; m_commandStack.size()=" << m_commandStack.size() << "; m_cmdStackPos=" << m_cmdStackPos << std::endl;
-    commandStackChanged(m_cmdStack, m_cmdStackPos);
+    emit commandStackChanged(m_cmdStack, m_cmdStackPos);
 }
 
 void Editor::onCut() {
@@ -113,9 +126,9 @@ void Editor::onCut() {
     QGuiApplication::clipboard()->setPixmap(clipboardData);
 
     m_currCommand = std::unique_ptr<Command>(new CommandCut(m_currSelection));
-    performCurrentCommand();
+    performCompleteCommand();
     pushCurrentCommand();
-    commandStackChanged(m_cmdStack, m_cmdStackPos);
+    emit commandStackChanged(m_cmdStack, m_cmdStackPos);
 }
 
 void Editor::onCopy() {
@@ -137,38 +150,44 @@ void Editor::onPaste() {
 
     auto rawData = QPixmap::fromImage(clipboardData);
     m_currCommand = std::unique_ptr<Command>(new CommandPaste(m_currSelection, rawData));
-    performCurrentCommand();
+    performCompleteCommand();
     pushCurrentCommand();
-    commandStackChanged(m_cmdStack, m_cmdStackPos);
+    emit commandStackChanged(m_cmdStack, m_cmdStackPos);
 }
 
 
 void Editor::onSelectAll() {
     m_currSelection = QRect {0, 0, m_width, m_height};
-    somethingDrawn();
-    selectionChanged(true);
+    emit somethingDrawn();
+    emit selectionChanged(true);
 }
 
 void Editor::onSelectNone() {
     m_currSelection = QRect {0, 0, 0, 0};
-    somethingDrawn();
-    selectionChanged(false);
+    emit somethingDrawn();
+    emit selectionChanged(false);
 }
 
 
-void Editor::onClicked(const QPoint pos) {
+void Editor::onClicked(const QPoint pos, Qt::MouseButton button) {
     Command * maybeCmd = ToolConfig::instance().getConfig(m_activeTool);
     if (!maybeCmd->isClickable()) {
         //FIXME: use a ToolSetting class instead
         return;
     }
 
+    std::cout << "Editor::onClicked; m_activeTool: " << m_activeTool << std::endl;
+
     m_currCommand = ToolConfig::instance().createCommand(m_activeTool);
+    m_currCommand->setMode((button == Qt::LeftButton) ? CommandMode::Primary : CommandMode::Alternate );
+    m_currCommand->setEditor(this);
     m_currCommand->setTargetPos(pos);
-    performCurrentCommand();
+    std::cout << "Editor::onClicked; button: " << button << std::endl;
+
+    performCompleteCommand();
     if (m_currCommand->isModifying()) {
         pushCurrentCommand();
-        commandStackChanged(m_cmdStack, m_cmdStackPos);
+        emit commandStackChanged(m_cmdStack, m_cmdStackPos);
     } else {
         m_currCommand.reset();
     }
@@ -199,10 +218,10 @@ void Editor::onDragEnded(const QPoint pos) {
     if ((m_currCommand == nullptr) || (!m_currCommand->isDraggable()))
         return;
 
-    performCurrentCommand();
+    performCompleteCommand();
     if (m_currCommand->isModifying()) {
         pushCurrentCommand();
-        commandStackChanged(m_cmdStack, m_cmdStackPos);
+        emit commandStackChanged(m_cmdStack, m_cmdStackPos);
     } else {
         m_currCommand.reset();
     }
@@ -211,9 +230,11 @@ void Editor::onDragEnded(const QPoint pos) {
 }
 
 void Editor::onToolChosen(CommandType newToolType) {
+    std::cout << "onToolChosen" << std::endl;
+
     m_activeTool = newToolType;
     auto currCmd = ToolConfig::instance().getConfig(m_activeTool);
-    cursorChanged(QCursor(currCmd->getCursor()));
+    emit cursorChanged(QCursor(currCmd->getCursor()));
 }
 
 void Editor::onToolColorChosen(const QColor & color) {
@@ -238,6 +259,16 @@ void Editor::onToolWidthChosen(int width) {
     }
 }
 
+void Editor::resetDocument() {
+    m_width = m_initialBuffer.width();
+    m_height = m_initialBuffer.height();
+    m_zoomLevel = 100;
+
+    reset(m_currBuffer, m_initialBuffer);
+    setModified(false);
+    emit documentSizeChanged(m_initialBuffer.size());
+    emit zoomLevelChanged(m_zoomLevel);
+}
 
 void Editor::reset(QPixmap &destBuffer, const QPixmap &srcBuffer) {
     destBuffer = srcBuffer.copy();
@@ -247,54 +278,56 @@ void Editor::reset(QPixmap &destBuffer, const QPixmap &srcBuffer) {
 
     m_currCommand = nullptr;
 
-    commandStackChanged(m_cmdStack, m_cmdStackPos);
+    emit commandStackChanged(m_cmdStack, m_cmdStackPos);
 }
 
 
 void Editor::setModified(bool isModified) {
     m_isModified = isModified;
-    modifiedStatusChanged(isModified);
+    emit modifiedStatusChanged(isModified);
 }
 
+void Editor::performCompleteCommand() {
+    QPainter bufferPainter {&m_currBuffer};
+    performCurrentCommand(&bufferPainter);
+}
 
-void Editor::performCurrentCommand(QPaintDevice * target) {
-    if (m_currCommand == nullptr) 
+void Editor::performPartialCommand(QPainter * canvasPainter) {
+    performCurrentCommand(canvasPainter);
+}
+
+void Editor::performCurrentCommand(QPainter * painter) {
+    assert(painter != nullptr);
+    if (m_currCommand == nullptr)
         return;
     
-    if (target == nullptr)
-        target = &m_currBuffer;
+    if (m_currCommand->isModifying()) {
+        m_currCommand->perform(*painter);
 
-    QPainter painter {target};
-    m_currCommand->perform(painter);
-    somethingDrawn();
+    } else {
+        m_currCommand->perform();
+    }
+
+    emit somethingDrawn();
 }
 
-void Editor::paintCurrentBuffer(QPaintDevice * target) {
-    if (target == nullptr)
-        target = &m_currBuffer;
-
-    QPainter painter { target };
-    painter.drawPixmap(0, 0, m_currBuffer);
+void Editor::paintCurrentBuffer(QPainter * painter) {
+    assert(painter != nullptr);
+    painter->drawPixmap(0, 0, m_currBuffer);
 }
 
-void Editor::paintCustomCursor(QPoint &pos, QPaintDevice * target) {
+void Editor::paintCustomCursor(QPoint &pos, QWidget * target) {
     auto currToolConfig = ToolConfig::instance().getConfig(m_activeTool);
     if (!currToolConfig->usesCustomCursor())
         return;
-
-    if (target == nullptr)
-        target = &m_currBuffer;
 
     QPainter painter {target};
     currToolConfig->paintCustomCursor(painter, pos);
 }
 
-void Editor::paintCurrentSelection(QPaintDevice * target) {
+void Editor::paintCurrentSelection(QWidget * target) {
     if (m_currSelection.size().isEmpty())
         return;
-
-    if (target == nullptr)
-        target = &m_currBuffer;
 
     QPainter painter {target};
 
@@ -323,7 +356,7 @@ void Editor::pushCurrentCommand() {
     m_currCommand = nullptr;
 
     setModified();
-    commandStackChanged(m_cmdStack, m_cmdStackPos);
+    emit commandStackChanged(m_cmdStack, m_cmdStackPos);
 }
 
 
@@ -339,6 +372,6 @@ void Editor::restoreCommandsFromStack() {
     }
 
     setModified(m_isModified);
-    somethingDrawn();
+    emit somethingDrawn();
 }
 

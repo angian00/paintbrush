@@ -2,10 +2,10 @@
 #include "paintbrush_window.h"
 #include "command.h"
 #include "editor.h"
-#include "qnamespace.h"
 #include "tool_config.h"
 #include "paintbrush_canvas.h"
 
+#include "qnamespace.h"
 #include <QApplication>
 #include <QAction>
 #include <QMenuBar>
@@ -18,6 +18,7 @@
 #include <QSpinBox>
 #include <QLabel>
 #include <QClipboard>
+#include <QScrollArea>
 
 #include <iostream>
 
@@ -25,8 +26,8 @@
 const int screenWidth = 800;
 const int screenHeight = 600;
 
-const int documentWidth = 800;
-const int documentHeight = 600;
+const int documentWidth = 1200;
+const int documentHeight = 800;
 
 
 PaintbrushWindow::PaintbrushWindow() {
@@ -106,6 +107,10 @@ void PaintbrushWindow::initActions() {
     toolEraseAction->setIcon(QIcon("images/erase.svg"));
     toolEraseAction->setShortcut(QKeySequence("E"));
 
+    auto toolZoomAction = new QAction("Zoom", this);
+    toolZoomAction->setIcon(QIcon("images/search.svg"));
+    toolZoomAction->setShortcut(QKeySequence("Z"));
+
 
     //--------------------------- menu bar ---------------------------
 
@@ -151,6 +156,8 @@ void PaintbrushWindow::initActions() {
     toolBar->addAction(toolEraseAction);
 
     toolBar->addSeparator();
+    toolBar->addAction(toolZoomAction);
+    toolBar->addSeparator();
 
     //--------------------- connect slots from ui input ---------------------
     connect(newAction,  &QAction::triggered, this, &PaintbrushWindow::onFileNew);
@@ -172,6 +179,7 @@ void PaintbrushWindow::initActions() {
     connect(toolDrawAction,         &QAction::triggered, this, [=]() { chooseTool(CommandType::Draw); });
     connect(toolFillAction,         &QAction::triggered, this, [=]() { chooseTool(CommandType::Fill); });
     connect(toolEraseAction,        &QAction::triggered, this, [=]() { chooseTool(CommandType::Erase); });
+    connect(toolZoomAction,         &QAction::triggered, this, [=]() { chooseTool(CommandType::Zoom); });
 
     connect(m_toolColorChooserAction, &QAction::triggered, this, [=]() { m_colorChooser->show(); });
     connect(m_colorChooser, &QColorDialog::colorSelected, this, &PaintbrushWindow::onColorChosen);
@@ -187,11 +195,14 @@ void PaintbrushWindow::initActions() {
 
     //--------------------- connect signals from this ---------------------
     connect(this, &PaintbrushWindow::chooseTool, m_editor, &Editor::onToolChosen);
-    connect(m_editor, &Editor::cursorChanged, m_canvas, &PaintbrushCanvas::setCursor);
 
 
     //--------------------- connect signals/slots between other components ---------------------
+    connect(m_editor, &Editor::documentSizeChanged, m_canvas, &PaintbrushCanvas::onDocumentSizeChanged);
     connect(m_editor, &Editor::somethingDrawn, m_canvas, &PaintbrushCanvas::onSomethingDrawn);
+    connect(m_editor, &Editor::cursorChanged, m_canvas, &PaintbrushCanvas::setCursor);
+    connect(m_editor, &Editor::zoomLevelChanged, m_canvas, &PaintbrushCanvas::onZoomLevelChanged);
+
     connect(m_canvas, &PaintbrushCanvas::clicked, m_editor, &Editor::onClicked);
     connect(m_canvas, &PaintbrushCanvas::dragStarted, m_editor, &Editor::onDragStarted);
     connect(m_canvas, &PaintbrushCanvas::dragEnded, m_editor, &Editor::onDragEnded);
@@ -227,8 +238,14 @@ void PaintbrushWindow::initLayout() {
     setCentralWidget(centralWidget);
     auto mainLayout = new QVBoxLayout(centralWidget);
 
+    QScrollArea *scrollArea = new QScrollArea(this);
+    scrollArea->setWidget(m_canvas);
+    //scrollArea->setWidgetResizable(true);
+
     mainLayout->addWidget(m_toolSettingsPanel);
-    mainLayout->addWidget(m_canvas);
+    mainLayout->addWidget(scrollArea);
+    //mainLayout->addWidget(m_canvas);
+    std::cout << "initLayout; m_canvas=" << m_canvas << std::endl;
 }
 
 
