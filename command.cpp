@@ -74,14 +74,24 @@ void CommandPaste::perform(QPainter &painter) const {
 }
 
 
+void CommandScroll::perform() const {
+    std::cout << "CommandScroll::perform" << std::endl;
+
+    QPoint delta {};
+    if (m_mode == Primary)
+        delta.setY(m_scrollAmount);
+    else
+        delta.setX(m_scrollAmount);
+
+    m_editor->viewMoved(delta);
+}
+
 void CommandZoom::perform() const {
     //TODO: center movement around m_targetPos
     std::cout << "CommandZoom::perform" << std::endl;
-    std::cout << "mode: " << m_mode << std::endl;
-    std::cout << "editor: " << m_editor << std::endl;
 
     if (m_mode == Primary)
-        m_editor->zoomIn();
+        m_editor->zoomIn(m_zoomFactor);
     else
-        m_editor->zoomOut();
+        m_editor->zoomOut(m_zoomFactor);
 }

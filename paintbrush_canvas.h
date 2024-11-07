@@ -6,9 +6,10 @@
 
 #include <QPixmap>
 #include <QWidget>
+#include <QMouseEvent>
+#include <QWheelEvent>
 
 #include <vector>
-#include <iostream>
 
 
 
@@ -39,6 +40,7 @@ protected:
     void mouseMoveEvent(QMouseEvent *event) override;
     void mousePressEvent(QMouseEvent *event) override;
     void mouseReleaseEvent(QMouseEvent *event) override;
+    void wheelEvent(QWheelEvent *event) override;
 
 private:
     void updateCanvasSize();
@@ -49,6 +51,9 @@ signals:
     void dragStarted(QPoint pos);
     void dragEnded(QPoint pos);
     void dragContinued(const QPoint start, const QPoint end);
+    void wheelRolled(const QPoint pos, int delta, QFlags<Qt::KeyboardModifier> modifiers);
 };
+
+
 
 #endif // PAINTBRUSH_CANVAS_H

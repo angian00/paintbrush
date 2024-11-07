@@ -99,6 +99,10 @@ void PaintbrushCanvas::mouseReleaseEvent(QMouseEvent *event) {
     }
 }
 
+void PaintbrushCanvas::wheelEvent(QWheelEvent *event) {
+    QPoint intPos = QPoint { static_cast<int>(event->position().x()), static_cast<int>(event->position().y()) };
+    emit wheelRolled(intPos, event->angleDelta().y(), event->modifiers());
+}
 
 QPoint PaintbrushCanvas::scalePoint(const QPoint &p) const {
     return QPoint {

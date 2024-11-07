@@ -11,7 +11,14 @@
 ToolConfig::ToolConfig() {
     //FUTURE: load from persistent source (document file, or user profile dir)
     
-    for (auto cmdType: { CommandType::Select, CommandType::Draw, CommandType::Fill, CommandType::Erase, CommandType::Zoom  }) {
+    for (auto cmdType: {
+        CommandType::Select,
+        CommandType::Draw,
+        CommandType::Fill,
+        CommandType::Erase,
+        CommandType::Scroll,
+        CommandType::Zoom,
+    }) {
         
         Command *cmdConfig;
         
@@ -28,6 +35,10 @@ ToolConfig::ToolConfig() {
                 break;
             case Erase:
                 cmdConfig = new CommandErase { defaultDrawWidth * 4 };
+                break;
+
+            case Scroll:
+                cmdConfig = new CommandScroll {  };
                 break;
 
             case Zoom:

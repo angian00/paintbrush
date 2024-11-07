@@ -31,8 +31,8 @@ public:
     bool loadFile(const QString filename);
     bool saveFile(const QString filename);
 
-    void zoomIn();
-    void zoomOut();
+    void zoomIn(int zoomFactor);
+    void zoomOut(int zoomFactor);
 
     // void paintCurrentBuffer(QPaintDevice * target=nullptr);
     // void performCurrentCommand(QPaintDevice * target=nullptr);
@@ -61,6 +61,7 @@ public slots:
     void onDragStarted(const QPoint pos);
     void onDragEnded(const QPoint pos);
     void onDragContinued(const QPoint start, const QPoint end);
+    void onWheelRolled(const QPoint pos, int delta, QFlags<Qt::KeyboardModifier> modifiers);
 
 
 protected:
@@ -93,6 +94,7 @@ protected:
 signals:
     void documentSizeChanged(QSize size);
     void zoomLevelChanged(int zoomLevel);
+    void viewMoved(QPoint delta);
     void somethingDrawn();
     
     void modifiedStatusChanged(bool isDocumentModified);

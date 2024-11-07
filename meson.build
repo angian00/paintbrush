@@ -22,12 +22,14 @@ sources = [
   'tool_config.cpp',
   'paintbrush_window.cpp',
   'paintbrush_canvas.cpp',
+  'paintbrush_scroll_area.cpp',
 ]
 
 sources += qt5.compile_moc(headers: [
   'editor.h',
   'paintbrush_window.h',
   'paintbrush_canvas.h',
+  'paintbrush_scroll_area.h',
 ])
 
 executable(

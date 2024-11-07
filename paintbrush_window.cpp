@@ -35,6 +35,7 @@ PaintbrushWindow::PaintbrushWindow() {
 
     m_editor = new Editor { documentWidth, documentHeight };
     m_canvas = new PaintbrushCanvas { this, m_editor };
+    m_scrollArea = new PaintbrushScrollArea(this);
 
     m_colorChooser = new QColorDialog(this);
 
@@ -199,11 +200,14 @@ void PaintbrushWindow::initActions() {
 
     //--------------------- connect signals/slots between other components ---------------------
     connect(m_editor, &Editor::documentSizeChanged, m_canvas, &PaintbrushCanvas::onDocumentSizeChanged);
+    connect(m_editor, &Editor::zoomLevelChanged, m_canvas, &PaintbrushCanvas::onZoomLevelChanged);
     connect(m_editor, &Editor::somethingDrawn, m_canvas, &PaintbrushCanvas::onSomethingDrawn);
     connect(m_editor, &Editor::cursorChanged, m_canvas, &PaintbrushCanvas::setCursor);
-    connect(m_editor, &Editor::zoomLevelChanged, m_canvas, &PaintbrushCanvas::onZoomLevelChanged);
+    
+    connect(m_editor, &Editor::viewMoved, m_scrollArea, &PaintbrushScrollArea::onViewMoved);
 
     connect(m_canvas, &PaintbrushCanvas::clicked, m_editor, &Editor::onClicked);
+    connect(m_canvas, &PaintbrushCanvas::wheelRolled, m_editor, &Editor::onWheelRolled);
     connect(m_canvas, &PaintbrushCanvas::dragStarted, m_editor, &Editor::onDragStarted);
     connect(m_canvas, &PaintbrushCanvas::dragEnded, m_editor, &Editor::onDragEnded);
     connect(m_canvas, &PaintbrushCanvas::dragContinued, m_editor, &Editor::onDragContinued);
@@ -238,12 +242,11 @@ void PaintbrushWindow::initLayout() {
     setCentralWidget(centralWidget);
     auto mainLayout = new QVBoxLayout(centralWidget);
 
-    QScrollArea *scrollArea = new QScrollArea(this);
-    scrollArea->setWidget(m_canvas);
+    m_scrollArea->setWidget(m_canvas);
     //scrollArea->setWidgetResizable(true);
 
     mainLayout->addWidget(m_toolSettingsPanel);
-    mainLayout->addWidget(scrollArea);
+    mainLayout->addWidget(m_scrollArea);
     //mainLayout->addWidget(m_canvas);
     std::cout << "initLayout; m_canvas=" << m_canvas << std::endl;
 }

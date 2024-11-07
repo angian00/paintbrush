@@ -1,15 +1,12 @@
 ## TODO
 
 - zoom
-    - scroll on mouse wheel / Shift mouse wheel
-    - zoom on Ctrl+mouse wheel
-    - zoomOut con click destro
+    - centrare zoom su pos
 
 - aggiungere status bar con pos cursore e zoom level
 
 
 - moveView on space
-- scroll hor on mouse wheel, scroll ver on Shift + mouse wheel
 
 + command transform
 
@@ -35,7 +32,7 @@
 ### Bugfixing
 
 ### Performance
-- lento quando la scala e' elevata (==quando la canvas e' grande)
+- lento quando la scala e' elevata (== quando la canvas e' grande)
 
 ### Controllare su linux nativo
 - comportamento cursor 

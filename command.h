@@ -1,9 +1,9 @@
 #ifndef COMMAND_H
 #define COMMAND_H
 
+#include "constants.h"
 
 #include "qnamespace.h"
-#include "qpainter.h"
 #include <QPixmap>
 #include <QColor>
 #include <QPoint>
@@ -26,6 +26,7 @@ enum CommandType {
     Cut,
     Copy,
     Paste,
+    Scroll,
     Zoom,
 };
 
@@ -53,6 +54,9 @@ public:
     virtual void startDrag(const QPoint pos) {};
     virtual void continueDrag(const QPoint from, const QPoint to) {};
     
+    virtual bool isWheelable() const { return false; };
+    virtual void setWheelDelta(int delta) {};
+
     virtual void perform() const {};
     virtual void perform(QPainter &painter) const {};
     virtual const Qt::CursorShape getCursor() const { return Qt::ArrowCursor; }
@@ -274,10 +278,34 @@ protected:
 };
 
 
+class CommandScroll: public Command {
+
+public:
+    CommandScroll(): m_scrollAmount(defaultScrollAmount) {}
+
+    void setScrollAmount(int scrollAmount) { m_scrollAmount = scrollAmount; }
+
+    std::unique_ptr<Command> clone() const override {
+        return std::make_unique<CommandScroll>(*this);
+    }
+
+    CommandType type() const override { return CommandType::Scroll; }
+    bool isModifying() const override { return false; };
+    bool isClickable() const override { return true; };
+    bool isWheelable() const override { return true; };
+
+    void perform() const override;
+
+protected:
+    int m_scrollAmount;
+};
+
 class CommandZoom: public Command {
 
 public:
-    CommandZoom() {}
+    CommandZoom(): m_zoomFactor(defaultZoomFactor) {}
+
+    void setZoomFactor(int zoomFactor) { m_zoomFactor = zoomFactor; }
 
     std::unique_ptr<Command> clone() const override {
         return std::make_unique<CommandZoom>(*this);
@@ -286,6 +314,7 @@ public:
     CommandType type() const override { return CommandType::Zoom; }
     bool isModifying() const override { return false; };
     bool isClickable() const override { return true; };
+    bool isWheelable() const override { return true; };
 
     void setTargetPos(const QPoint pos) override { m_targetPos = pos; };
 
@@ -294,6 +323,7 @@ public:
 
 protected:
     QPoint m_targetPos;
+    int m_zoomFactor;
 };
 
 

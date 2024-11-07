@@ -4,6 +4,7 @@
 #include "command.h"
 #include "editor.h"
 #include "paintbrush_canvas.h"
+#include "paintbrush_scroll_area.h"
 
 #include <QColorDialog>
 #include <QMainWindow>
@@ -24,6 +25,7 @@ public:
 private:
     Editor *m_editor;
     PaintbrushCanvas *m_canvas;
+    PaintbrushScrollArea *m_scrollArea;
 
     QColorDialog *m_colorChooser;
     QWidget *m_toolSettingsPanel;

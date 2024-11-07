@@ -2,6 +2,7 @@
 
 #include "constants.h"
 #include "command.h"
+#include "qpoint.h"
 #include "tool_config.h"
 #include "paintbrush_window.h"
 
@@ -73,16 +74,16 @@ bool Editor::saveFile(const QString filename) {
     return true;
 }
 
-void Editor::zoomIn() {
+void Editor::zoomIn(int zoomFactor) {
     std::cout << "Editor::zoomIn" << std::endl;
 
-    m_zoomLevel = std::min(maxZoomLevel, m_zoomLevel * 2);
+    m_zoomLevel = std::min(maxZoomLevel, m_zoomLevel * zoomFactor);
     emit zoomLevelChanged(m_zoomLevel);
     std::cout << "after Editor::zoomIn" << std::endl;
 }
 
-void Editor::zoomOut() {
-    m_zoomLevel = std::max(minZoomLevel, m_zoomLevel / 2);
+void Editor::zoomOut(int zoomFactor) {
+    m_zoomLevel = std::max(minZoomLevel, m_zoomLevel / zoomFactor);
     emit zoomLevelChanged(m_zoomLevel);
     std::cout << "after Editor::zoomOut" << std::endl;
 }
@@ -182,7 +183,6 @@ void Editor::onClicked(const QPoint pos, Qt::MouseButton button) {
     m_currCommand->setMode((button == Qt::LeftButton) ? CommandMode::Primary : CommandMode::Alternate );
     m_currCommand->setEditor(this);
     m_currCommand->setTargetPos(pos);
-    std::cout << "Editor::onClicked; button: " << button << std::endl;
 
     performCompleteCommand();
     if (m_currCommand->isModifying()) {
@@ -223,6 +223,39 @@ void Editor::onDragEnded(const QPoint pos) {
         pushCurrentCommand();
         emit commandStackChanged(m_cmdStack, m_cmdStackPos);
     } else {
+        m_currCommand.reset();
+    }
+
+    assert(m_currCommand == nullptr);
+}
+
+
+void Editor::onWheelRolled(const QPoint pos, int delta, QFlags<Qt::KeyboardModifier> modifiers) {
+    static constexpr double wheelZoomFactor = 50.0;
+    static constexpr double wheelScrollFactor = 1.0;
+    assert(m_currCommand == nullptr);
+    std::cout << "Editor::onWheelRolled; delta: " << delta << std::endl;
+
+    if (modifiers &  Qt::ControlModifier) {
+        //zoom command
+        m_currCommand = ToolConfig::instance().createCommand(CommandType::Zoom);
+        m_currCommand->setEditor(this);
+        m_currCommand->setTargetPos(pos);
+        m_currCommand->setMode(delta >= 0 ? Primary : Alternate);
+        static_cast<CommandZoom *>(m_currCommand.get())->setZoomFactor(std::abs(delta)/wheelZoomFactor);
+        performCompleteCommand();
+        m_currCommand.reset();
+
+    } else {
+        std::cout << "Editor::onWheelRolled; creating scroll command" << std::endl;
+
+        // scroll command
+        m_currCommand = ToolConfig::instance().createCommand(CommandType::Scroll);
+        m_currCommand->setEditor(this);
+        m_currCommand->setTargetPos(pos); //not used
+        m_currCommand->setMode((modifiers &  Qt::ShiftModifier) ? Alternate : Primary);
+        static_cast<CommandScroll *>(m_currCommand.get())->setScrollAmount(-delta/wheelScrollFactor);
+        performCompleteCommand();
         m_currCommand.reset();
     }
 
