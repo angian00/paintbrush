@@ -22,6 +22,8 @@
 
 
 ### Refactoring
+- spostare PaintbrushScrollArea::onViewMoved in canvas (o vieceversa)
+
 - spezzare metodi init paintbrush_window
 - spostare Command* in file separati
 ? differenziare comandi istantanei da quelli che usano il mouse

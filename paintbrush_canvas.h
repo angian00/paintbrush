@@ -3,6 +3,8 @@
 
 #include "editor.h"
 #include "qnamespace.h"
+#include "qscrollarea.h"
+#include "qwidget.h"
 
 #include <QPixmap>
 #include <QWidget>
@@ -17,14 +19,16 @@ class PaintbrushCanvas : public QWidget
 {
 Q_OBJECT
 public:
-    explicit PaintbrushCanvas(QWidget *parent, Editor *editor);
+    explicit PaintbrushCanvas(QWidget *parent, QScrollArea *scrollArea, Editor *editor);
     
 public slots:
     void onDocumentSizeChanged(QSize size);
-    void onZoomLevelChanged(int zoomLevel);
+    void onZoomLevelChanged(double zoomLevel, const QPoint & zoomPos);
     void onSomethingDrawn() { update(); }
+    void onViewMovedBy(QPoint deltaPx);
 
 protected:
+    QScrollArea *m_scrollArea;
     Editor *m_editor;
 
     QSize m_documentSize;
@@ -33,7 +37,14 @@ protected:
     bool m_isDragging { false };
     QPoint m_dragStart;
     QPoint m_currMousePos;
-    double m_scaleFactor;
+    QPoint m_viewCenter;
+    double m_zoomLevel;
+
+    void updateSizeAndPos(const QPoint & zoomPos);
+    void moveViewToCenter(const QPoint &center);
+
+    QPoint scalePoint(const QPoint & p) const;
+    QRect getVisibleArea() const;
 
 
     void paintEvent(QPaintEvent *event) override;
@@ -41,10 +52,6 @@ protected:
     void mousePressEvent(QMouseEvent *event) override;
     void mouseReleaseEvent(QMouseEvent *event) override;
     void wheelEvent(QWheelEvent *event) override;
-
-private:
-    void updateCanvasSize();
-    QPoint scalePoint(const QPoint & p) const;
 
 signals:
     void clicked(QPoint pos, Qt::MouseButton button);

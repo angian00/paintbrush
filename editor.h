@@ -31,8 +31,7 @@ public:
     bool loadFile(const QString filename);
     bool saveFile(const QString filename);
 
-    void zoomIn(int zoomFactor);
-    void zoomOut(int zoomFactor);
+    void zoom(double zoomFactor, const QPoint &zoomPos);
 
     // void paintCurrentBuffer(QPaintDevice * target=nullptr);
     // void performCurrentCommand(QPaintDevice * target=nullptr);
@@ -72,7 +71,7 @@ protected:
     QPixmap m_currBuffer;
 
     bool m_isModified;
-    int m_zoomLevel;
+    double m_zoomLevel;
 
     CommandType m_activeTool;
     QRect m_currSelection;
@@ -93,8 +92,8 @@ protected:
 
 signals:
     void documentSizeChanged(QSize size);
-    void zoomLevelChanged(int zoomLevel);
-    void viewMoved(QPoint delta);
+    void zoomLevelChanged(double zoomLevel, const QPoint & zoomPos);
+    void viewMovedBy(QPoint delta);
     void somethingDrawn();
     
     void modifiedStatusChanged(bool isDocumentModified);

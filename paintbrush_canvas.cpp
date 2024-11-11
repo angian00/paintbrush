@@ -2,7 +2,6 @@
 #include "command.h"
 #include "editor.h"
 #include "constants.h"
-#include "qtransform.h"
 
 #include <QApplication>
 #include <QPainter>
@@ -10,38 +9,35 @@
 #include <QMouseEvent>
 #include <QMessageBox>
 #include <QFileDialog>
+#include <QTransform>
 #include <QColor>
 #include <QSize>
+#include <QScrollBar>
 
 #include <math.h>
 
+
 void paintBackgroundPattern(QWidget * target);
 
-PaintbrushCanvas::PaintbrushCanvas(QWidget *parent, Editor *editor) : 
-    QWidget(parent), m_editor(editor), m_documentSize(QSize()), m_scaleFactor(1.0) {
+
+PaintbrushCanvas::PaintbrushCanvas(QWidget *parent, QScrollArea *scrollArea, Editor *editor) : 
+    QWidget(parent), m_scrollArea(scrollArea), m_editor(editor), m_documentSize(QSize()), m_zoomLevel(1.0) {
 
     setFixedSize(m_documentSize);
     setMouseTracking(true);
 }
 
 void PaintbrushCanvas::onDocumentSizeChanged(QSize size) {
+    std::cout << "onDocumentSizeChanged " << std::endl;
     m_documentSize = size;
-    updateCanvasSize();
+    updateSizeAndPos(QPoint { -1, -1 });
 
 }
 
-void PaintbrushCanvas::onZoomLevelChanged(int zoomLevel) {
+void PaintbrushCanvas::onZoomLevelChanged(double zoomLevel, const QPoint & zoomPos) {
     std::cout << "onZoomLevelChanged: " << zoomLevel << std::endl;
-    m_scaleFactor = zoomLevel / 100.0;
-    updateCanvasSize();
-}
-
-void PaintbrushCanvas::updateCanvasSize() {
-    auto canvasSize = m_documentSize * m_scaleFactor;
-    std::cout << "setting PaintbrushCanvas size to: " << canvasSize.width() << ", " << canvasSize.height() << std::endl;
-    setFixedSize(canvasSize);
-
-    update();
+    m_zoomLevel = zoomLevel;
+    updateSizeAndPos(zoomPos);
 }
 
 void PaintbrushCanvas::paintEvent(QPaintEvent * _) {
@@ -50,7 +46,7 @@ void PaintbrushCanvas::paintEvent(QPaintEvent * _) {
     QPainter painter { this };
     painter.setRenderHints(QPainter::Antialiasing);
 
-    QTransform transform = QTransform::fromScale(m_scaleFactor, m_scaleFactor);
+    QTransform transform = QTransform::fromScale(m_zoomLevel, m_zoomLevel);
     painter.setTransform(transform);
 
     m_editor->paintCurrentBuffer(&painter);
@@ -104,11 +100,82 @@ void PaintbrushCanvas::wheelEvent(QWheelEvent *event) {
     emit wheelRolled(intPos, event->angleDelta().y(), event->modifiers());
 }
 
+
 QPoint PaintbrushCanvas::scalePoint(const QPoint &p) const {
     return QPoint {
-        static_cast<int>(floor(p.x()/m_scaleFactor)), 
-        static_cast<int>(floor(p.y()/m_scaleFactor))
+        static_cast<int>(floor(p.x()/m_zoomLevel)), 
+        static_cast<int>(floor(p.y()/m_zoomLevel))
     };
+}
+
+
+QRect PaintbrushCanvas::getVisibleArea() const {
+    auto viewportRect = m_scrollArea->viewport()->rect();
+
+    //QRect visibleRect = mapFromParent(viewportRect.translated(m_scrollArea->viewport()->mapTo(this, QPoint(0, 0))));
+    auto topLeft = mapFromParent(viewportRect.topLeft());
+    auto bottomRight = mapFromParent(viewportRect.bottomRight());
+    auto visibleRect = QRect { topLeft, bottomRight };
+
+    return visibleRect;
+}
+
+void PaintbrushCanvas::updateSizeAndPos(const QPoint & zoomPos) {
+    auto canvasSize = m_documentSize * m_zoomLevel;
+    std::cout << "PaintbrushCanvas::updateSizeAndPos " << std::endl;
+    std::cout << "setting PaintbrushCanvas size to: " << canvasSize.width() << ", " << canvasSize.height() << std::endl;
+    setFixedSize(canvasSize);
+
+    update();
+    
+    QPoint newCenter;
+
+    if (zoomPos.x() < 0) {
+        newCenter = QPoint { canvasSize.width() / 2, canvasSize.height() / 2 };
+    } else {
+        newCenter = zoomPos + m_zoomLevel * (m_viewCenter - zoomPos);
+        //newCenter = zoomPos / m_zoomLevel + (m_viewCenter - zoomPos);
+    }
+
+    std::cout << "setting newCenter to: " << newCenter.x() << ", " << newCenter.y() << std::endl;
+    moveViewToCenter(newCenter);
+}
+
+void PaintbrushCanvas::moveViewToCenter(const QPoint &newCenter) {
+    auto viewport = m_scrollArea->viewport();
+
+    auto hBar = m_scrollArea->horizontalScrollBar();
+    std::cout << "setting m_scrollArea; hBar->minimum: " << hBar->minimum() << ", hBar->maximum: " << hBar->maximum() << std::endl;
+    auto newHorValue = newCenter.x() - viewport->width()  / 2;
+    newHorValue = std::max(hBar->minimum(), newHorValue);
+    newHorValue = std::min(hBar->maximum(), newHorValue);
+    hBar->setValue(newHorValue);
+
+    auto vBar = m_scrollArea->verticalScrollBar();
+    auto newVerValue = newCenter.y() - viewport->height() / 2;
+    newVerValue = std::max(vBar->minimum(), newVerValue);
+    newVerValue = std::min(vBar->maximum(), newVerValue);
+
+    hBar->setValue(newHorValue);
+    vBar->setValue(newVerValue);
+    std::cout << "newHorValue: " << newHorValue << ", newVerValue: " << newVerValue << std::endl;
+
+    m_viewCenter = newCenter;
+}
+
+
+void PaintbrushCanvas::onViewMovedBy(QPoint delta) {
+    auto hBar = m_scrollArea->horizontalScrollBar();
+    auto newHorValue = hBar->value() + delta.x();
+    newHorValue = std::max(hBar->minimum(), newHorValue);
+    newHorValue = std::min(hBar->maximum(), newHorValue);
+    hBar->setValue(newHorValue);
+
+    auto vBar = m_scrollArea->verticalScrollBar();
+    auto newVerValue = vBar->value() + delta.y();
+    newVerValue = std::max(vBar->minimum(), newVerValue);
+    newVerValue = std::min(vBar->maximum(), newVerValue);
+    vBar->setValue(newVerValue);
 }
 
 

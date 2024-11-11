@@ -10,13 +10,8 @@
 
 
 class PaintbrushScrollArea : public QScrollArea {
-    Q_OBJECT
-
 public:
     explicit PaintbrushScrollArea(QWidget *parent = nullptr) : QScrollArea(parent) {}
-
-public slots:
-    void onViewMoved(QPoint delta);
 
 protected:
     // disable automatic scroll on mouse wheel events

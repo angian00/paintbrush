@@ -83,7 +83,7 @@ void CommandScroll::perform() const {
     else
         delta.setX(m_scrollAmount);
 
-    m_editor->viewMoved(delta);
+    m_editor->viewMovedBy(delta);
 }
 
 void CommandZoom::perform() const {
@@ -91,7 +91,7 @@ void CommandZoom::perform() const {
     std::cout << "CommandZoom::perform" << std::endl;
 
     if (m_mode == Primary)
-        m_editor->zoomIn(m_zoomFactor);
+        m_editor->zoom(m_zoomFactor, m_targetPos);
     else
-        m_editor->zoomOut(m_zoomFactor);
+        m_editor->zoom(1.0/m_zoomFactor, m_targetPos);
 }

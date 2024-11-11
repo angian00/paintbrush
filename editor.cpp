@@ -19,7 +19,7 @@
 
 
 Editor::Editor(int width, int height): 
-    m_width(width), m_height(height), m_zoomLevel(100) {
+    m_width(width), m_height(height), m_zoomLevel(1.0) {
     
     m_initialBuffer = QPixmap(m_width, m_height);
     m_initialBuffer.fill(bkgColor);
@@ -74,18 +74,14 @@ bool Editor::saveFile(const QString filename) {
     return true;
 }
 
-void Editor::zoomIn(int zoomFactor) {
-    std::cout << "Editor::zoomIn" << std::endl;
+void Editor::zoom(double zoomFactor, const QPoint & zoomPos) {
+    std::cout << "Editor::zoom" << std::endl;
 
-    m_zoomLevel = std::min(maxZoomLevel, m_zoomLevel * zoomFactor);
-    emit zoomLevelChanged(m_zoomLevel);
-    std::cout << "after Editor::zoomIn" << std::endl;
-}
-
-void Editor::zoomOut(int zoomFactor) {
-    m_zoomLevel = std::max(minZoomLevel, m_zoomLevel / zoomFactor);
-    emit zoomLevelChanged(m_zoomLevel);
-    std::cout << "after Editor::zoomOut" << std::endl;
+    m_zoomLevel *= zoomFactor;
+    m_zoomLevel = std::min(maxZoomLevel, m_zoomLevel);
+    m_zoomLevel = std::max(minZoomLevel, m_zoomLevel);
+    emit zoomLevelChanged(m_zoomLevel, zoomPos);
+    std::cout << "after Editor::zoom" << std::endl;
 }
 
 
@@ -295,12 +291,11 @@ void Editor::onToolWidthChosen(int width) {
 void Editor::resetDocument() {
     m_width = m_initialBuffer.width();
     m_height = m_initialBuffer.height();
-    m_zoomLevel = 100;
+    m_zoomLevel = 1.0;
 
     reset(m_currBuffer, m_initialBuffer);
     setModified(false);
     emit documentSizeChanged(m_initialBuffer.size());
-    emit zoomLevelChanged(m_zoomLevel);
 }
 
 void Editor::reset(QPixmap &destBuffer, const QPixmap &srcBuffer) {

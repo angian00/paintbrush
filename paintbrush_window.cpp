@@ -33,9 +33,9 @@ const int documentHeight = 800;
 PaintbrushWindow::PaintbrushWindow() {
     setFixedSize(screenWidth, screenHeight);
 
-    m_editor = new Editor { documentWidth, documentHeight };
-    m_canvas = new PaintbrushCanvas { this, m_editor };
     m_scrollArea = new PaintbrushScrollArea(this);
+    m_editor = new Editor { documentWidth, documentHeight };
+    m_canvas = new PaintbrushCanvas { this, m_scrollArea, m_editor };
 
     m_colorChooser = new QColorDialog(this);
 
@@ -201,10 +201,9 @@ void PaintbrushWindow::initActions() {
     //--------------------- connect signals/slots between other components ---------------------
     connect(m_editor, &Editor::documentSizeChanged, m_canvas, &PaintbrushCanvas::onDocumentSizeChanged);
     connect(m_editor, &Editor::zoomLevelChanged, m_canvas, &PaintbrushCanvas::onZoomLevelChanged);
+    connect(m_editor, &Editor::viewMovedBy, m_canvas, &PaintbrushCanvas::onViewMovedBy);
     connect(m_editor, &Editor::somethingDrawn, m_canvas, &PaintbrushCanvas::onSomethingDrawn);
     connect(m_editor, &Editor::cursorChanged, m_canvas, &PaintbrushCanvas::setCursor);
-    
-    connect(m_editor, &Editor::viewMoved, m_scrollArea, &PaintbrushScrollArea::onViewMoved);
 
     connect(m_canvas, &PaintbrushCanvas::clicked, m_editor, &Editor::onClicked);
     connect(m_canvas, &PaintbrushCanvas::wheelRolled, m_editor, &Editor::onWheelRolled);
